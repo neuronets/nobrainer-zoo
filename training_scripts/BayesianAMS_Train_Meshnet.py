@@ -74,6 +74,9 @@ validation_steps = nobrainer.dataset.get_steps_per_epoch(
 
 validation_steps
 
+from nobrainer.models.bayesian_mesh import variational_meshnet
+import tensorflow_probability as tfp
+
 model = variational_meshnet(n_classes=50, input_shape=(32, 32, 32, 1), filters=96, dropout="concrete", receptive_field=37, is_monte_carlo=True)
 weights_path = tf.keras.utils.get_file(fname="nobrainer_spikeslab_32iso_weights.h5",
     origin="https://dl.dropbox.com/s/rojjoio9jyyfejy/nobrainer_spikeslab_32iso_weights.h5")
@@ -91,11 +94,11 @@ new_model.add(tfp.layers.Convolution3DFlipout(filters=1,
 new_model.compile(tf.keras.optimizers.Adam(lr=1e-02),loss=nobrainer.losses.jaccard,
         metrics=[nobrainer.metrics.dice])
 
-model.fit(
+new_model.fit(
     dataset_train,
     epochs= 20,
     steps_per_epoch=steps_per_epoch, 
     validation_data=dataset_evaluate, 
     validation_steps=validation_steps)
 
-model.save_weights('weights_BAMS_meshnet.hdf5')
+new_model.save_weights('weights_BAMS_meshnet.hdf5')
