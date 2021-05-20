@@ -1,3 +1,4 @@
+# This script helps to understand hwo to fine tune a model for a tumor segmentation problem
 import nobrainer
 import tensorflow as tf
 
@@ -12,6 +13,11 @@ invalid = nobrainer.io.verify_features_labels(train_paths, num_parallel_calls=2)
 assert not invalid
 invalid = nobrainer.io.verify_features_labels(evaluate_paths)
 assert not invalid
+
+current_directory = os.getcwd()
+final_directory = os.path.join(current_directory, r'data')
+if not os.path.exists(final_directory):
+   os.makedirs(final_directory)
 
 nobrainer.tfrecord.write(
     features_labels=train_paths,
