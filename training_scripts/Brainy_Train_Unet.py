@@ -13,6 +13,7 @@ assert not invalid
 invalid = nobrainer.io.verify_features_labels(evaluate_paths)
 assert not invalid
 
+import os
 current_directory = os.getcwd()
 final_directory = os.path.join(current_directory, r'data')
 if not os.path.exists(final_directory):
