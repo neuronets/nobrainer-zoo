@@ -1,0 +1,4 @@
+__pycache__/
+*.zip
+*.egg-info
+./trained-models
