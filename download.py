@@ -14,7 +14,7 @@ def download_model(model_path):
         datalad.api.clone(url)
         
     if not os.path.exists(model_path):
-        datalad.api.get(model_path)
+        datalad.api.get(dataset="./trained-models",path=model_path)
     
 if __name__ == '__main__':
     import sys
