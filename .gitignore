@@ -1,7 +1,8 @@
 __pycache__/
 *.zip
 *.egg-info
-./trained-models
+trained-models/*
+tmp_codes/*
 ams_inference.py
 bayesian_inference_general.py
 brainy_inference.py

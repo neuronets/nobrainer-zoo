@@ -10,5 +10,4 @@ RUN python3 -m pip install --no-cache-dir nobrainer datalad datalad-osf
 ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 WORKDIR "/work"
-LABEL maintainer="Jakub Kaczmarzyk <jakub.kaczmarzyk@gmail.com>","Hoda Rajaei <rajaei.hoda@gmail.com"
-ENTRYPOINT ["python3"]
+LABEL maintainer="Jakub Kaczmarzyk <jakub.kaczmarzyk@gmail.com>"

@@ -104,9 +104,9 @@ def gpu_run(
     model_path=get_model_path(model, model_type)
     
     if model_type == None:
-        cmd0 = ["singularity","run",img,"download.py",model]
+        cmd0 = ["singularity","run",img,"python3","download.py",model]
     else:
-        cmd0 = ["singularity","run",img,"download.py",model,model_type]
+        cmd0 = ["singularity","run",img,"python3","download.py",model,model_type]
     
     # download the model using container
     p0=sp.run(cmd0,stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
@@ -115,20 +115,29 @@ def gpu_run(
     # create the command 
     options =["--nv","-B","$(pwd):/data","-W", "/data"]
     # ToDo add generate function for GAN models
-    # ToDo add if state,ent for flag-type options
+    
     nb_command = ["predict"]
-    model_options = [infile,outfile,
-                     str(block_shape),
-                     str(resize_features_to),
-                     str(threshold),]
-                     #largest_label,
-                     #rotate_and_predict,
-                     #verbose]
+    data = [infile,outfile]
+        
+    model_options=["-b", str(block_shape[0]),str(block_shape[1]),str(block_shape[2]),
+                   "-r", str(resize_features_to[0]),str(resize_features_to[1]),str(resize_features_to[2]),
+                   "-t", str(threshold)]
+    
+    # add flag-type options
+    if largest_label:
+        model_options = model_options+["-l"]
+    
+    if rotate_and_predict:
+        model_options = model_options+["--rotate-and-predict"]
+         
+    if verbose:
+        model_options = model_options+["-v"]
+  
                  
-    cmd = ["singularity","run"]+options+[img]+["nobrainer"]+nb_command+[model_path]+model_options
+    cmd = ["singularity","run"]+options+[img]+["nobrainer"]+nb_command+["-m"]+[model_path]+data+model_options
     
     # run command
-    p1 = sp.run(cmd,stdout=sp.PIPE,stderr=sp.PIPE)            
+    p1 = sp.run(cmd,stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)            
     print(p1.stdout)
     
 # for debugging purposes    
