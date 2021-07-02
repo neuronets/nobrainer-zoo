@@ -1,10 +1,16 @@
-from utils import get_model_path
+from zoo.utils import get_model_path
 import subprocess as sp
 import click
+import sys
 
 _option_kwds = {"show_default": True}
 
-@click.command()
+@click.group()
+def cli():
+    """A collection of neuro imaging deep learning models."""
+    return
+
+@cli.command()
 @click.argument("infile")
 @click.argument("outfile")
 @click.option(
@@ -73,7 +79,7 @@ _option_kwds = {"show_default": True}
 @click.option(
     "-v", "--verbose", is_flag=True, help="Print progress bar.", **_option_kwds
 )
-def gpu_run(
+def predict(
     *,
     infile,
     outfile,
@@ -96,7 +102,7 @@ def gpu_run(
     # set the docker/singularity image
     org=model.split("/")[0]
     if org=="neuronets":
-        img = "nobrainer-zoo_test.sif"
+        img = "env/nobrainer-zoo_test.sif"
     else:
         raise NotImplementedError
         
@@ -140,8 +146,32 @@ def gpu_run(
     p1 = sp.run(cmd,stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)            
     print(p1.stdout)
     
+@cli.command()
+def generate():
+    """
+    Generate output from GAN models.
+    """
+    click.echo(
+        "Not implemented yet. In the future, this command will be used to generate output from GAN models."
+    )
+    sys.exit(-2)
+    
+@cli.command()
+def register():
+    """
+    Creates output for brain registration.
+    """
+    click.echo(
+        "Not implemented yet. In the future, this command will be used for brain registration."
+    )
+    sys.exit(-2)
+    
+    
+    
+    
+    
 # for debugging purposes    
 if __name__ == "__main__":
-    gpu_run()
+    cli()
     
     

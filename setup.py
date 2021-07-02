@@ -9,6 +9,6 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        nobrainer-zoo=cli:gpu_run
+        nobrainer-zoo=zoo.cli:cli
     ''',
 )

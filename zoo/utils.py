@@ -12,8 +12,7 @@ def get_model_path(model_name, model_type=None):
     model_path
     
     """
-    # TO DO: model database can be json file and be updated separately
-    # To DO: model version can be stored as one level of the hierarchy
+    # TO DO: model database can be a json file and be updated separately
     neuronet_models = {"neuronets/ams/0.1.0": "meningioma_T1wc_128iso_v1.h5",
               "neuronets/braingen/0.1.0": ["generator_res_8",
                                  "generator_res_16",
