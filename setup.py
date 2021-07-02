@@ -9,6 +9,6 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        nobrainer-zoo=zoo.cli:cli
+        nobrainer-zoo=nobrainerzoo.cli:cli
     ''',
 )

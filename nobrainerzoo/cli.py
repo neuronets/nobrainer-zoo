@@ -1,4 +1,4 @@
-from zoo.utils import get_model_path
+from nobrainerzoo.utils import get_model_path
 import subprocess as sp
 import click
 import sys
