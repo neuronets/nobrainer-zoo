@@ -1,51 +1,49 @@
-#### general setting
+
+#### general settings
+name: unet_brainy
 is_train: true
-use_visdom: false
-visdom_port: 8067
+#use_visdom: false # for visualization
+#visdom_port: 8067  
 model: cnn
 device: cuda:0
 
-#### Dataset Setting
+#### datasets
 dataset:
-  read: ram # disk
-  scale: 2
+  n_classes: 1
   train:
-    name: DIV2K
-    data_location: data/datasets/DIV2k/
-    shuffle: true
-    n_workers: 1  # per GPU
-    batch_size: 40
-    lr_size: 48
-    repeat: 2
-  test:
-    name: Set14
-    data_location: data/datasets/Set14/
-    shuffle: false
-    n_workers: 1  # per GPU
+    name: sample_MGH
+    data_location: data/
+    shuffle_buffer_size: 10
+    block_shape: 32
+    volume_shape: 256  
+    batch_size: 2  # per GPU
+    augment: False
+    num_parallel_calls: 2 # keeping same as batch size
+  test:     #  test params may differ from train params
+    name: sample_MGH
+    data_location: data/
+    shuffle_buffer_size: 0
+    block_shape: 32
+    volume_shape: 256
     batch_size: 1
-    repeat: 1
+    num_parallel_calls: 1
+    augment: False
 
-####  Architecture Setting
-network_G:
-  model: UNET
-
+#### network structures
+network:
+  model: unet
+  batchnorm: True
 #### training settings: learning rate scheme, loss
 train:
-  epoch: 1
-  cl_train: false
-  lr_G: !!float 1e-4
-  weight_decay_G: 0
-  beta1_G: 0.9
-  beta2_G: 0.99
-
-  lr_scheme: MultiStepLR
-  lr_step: [200, 400, 600, 800]
-  lr_gamma: 0.5
-  val_freq: 5 # epoch
+  epoch: 5
+  lr: .00001  # adam
+  loss: dice
+  metric: dice
 
 #### logger
 logger:
-  print_freq: 6 # epoch
-  chkpt_freq: 100 # epoch
-  img_freq: 100
-  path: experiments/
+  ckpt_path: ckpts/
+  
+path:
+  save_model: model/
+  pretrained_model: none
