@@ -9,12 +9,12 @@ def download_model(model_path):
     """ 
     
     # if trained model is not already cloned
-    if not os.path.exists("./trained-models"):
+    if not os.path.exists("nobrainerzoo/trained-models"):
         url="git@github.com:neuronets/trained-models.git"
-        datalad.api.clone(url)
+        datalad.api.clone(source=url, path="nobrainerzoo/trained-models")
         
     if not os.path.exists(model_path):
-        datalad.api.get(dataset="./trained-models",path=model_path)
+        datalad.api.get(dataset="nobrainerzoo/trained-models",path=model_path)
     
 if __name__ == '__main__':
     import sys

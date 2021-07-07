@@ -2,6 +2,7 @@ from nobrainerzoo.utils import get_model_path
 import subprocess as sp
 import click
 import sys
+import os
 
 _option_kwds = {"show_default": True}
 
@@ -99,31 +100,32 @@ def predict(
 
     """
     
+    # TODO download the image if it is not already downloded
     # set the docker/singularity image
     org=model.split("/")[0]
     if org=="neuronets":
-        img = "env/nobrainer-zoo_test.sif"
+        img = os.path.join(os.getcwd(),"nobrainerzoo/env/nobrainer-zoo_test.sif")
     else:
         raise NotImplementedError
-        
+    
     #create model_path
     model_path=get_model_path(model, model_type)
     
     if model_type == None:
-        cmd0 = ["singularity","run",img,"python3","download.py",model]
+        cmd0 = ["singularity","run",img,"python3","nobrainerzoo/download.py",model]
     else:
-        cmd0 = ["singularity","run",img,"python3","download.py",model,model_type]
+        cmd0 = ["singularity","run",img,"python3","nobrainerzoo/download.py",model,model_type]
     
     # download the model using container
     p0=sp.run(cmd0,stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
     print(p0.stdout)
          
     # create the command 
-    options =["--nv","-B","$(pwd):/data","-W", "/data"]
-    # ToDo add generate function for GAN models
+    data_path = os.path.abspath(os.path.dirname(infile))
+    options =["--nv","-B",data_path,"-B","$(pwd):/data","-W", "/data"]
     
     nb_command = ["predict"]
-    data = [infile,outfile]
+    data = [os.path.abspath(infile),os.path.abspath(outfile)]
         
     model_options=["-b", str(block_shape[0]),str(block_shape[1]),str(block_shape[2]),
                    "-r", str(resize_features_to[0]),str(resize_features_to[1]),str(resize_features_to[2]),
