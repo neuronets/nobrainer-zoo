@@ -1,8 +1,9 @@
 from nobrainerzoo.utils import get_model_path
 import subprocess as sp
+from pathlib import Path
 import click
+import yaml
 import sys
-import os
 
 _option_kwds = {"show_default": True}
 
@@ -27,6 +28,13 @@ def cli():
     default=None,
     type=str,
     help="Type of model for kwyk and braingen model",
+    **_option_kwds,
+)
+@click.option(
+    "--container_type",
+    default="singularity",
+    type=str,
+    help="Type of the container technology (docker or singularity)",
     **_option_kwds,
 )
 @click.option(
@@ -86,6 +94,7 @@ def predict(
     outfile,
     model,
     model_type,
+    container_type,
     block_shape,
     resize_features_to,
     threshold,
@@ -102,50 +111,76 @@ def predict(
     
     # TODO download the image if it is not already downloded
     # set the docker/singularity image
-    org=model.split("/")[0]
-    if org=="neuronets":
-        img = os.path.join(os.getcwd(),"nobrainerzoo/env/nobrainer-zoo_test.sif")
+    org, model_nm, ver = model.split("/")
+
+    model_dir = Path(__file__).resolve().parents[0] / model
+    spec_file = model_dir / "spec.yml"
+
+    if not model_dir.exists():
+        raise Exception("model directory not found")
+    if not spec_file.exists():
+        raise Exception("spec file doesn't exist")
+
+    with spec_file.open() as f:
+        spec = yaml.safe_load(f)
+
+    if container_type in ["singularity", "docker"]:
+        if container_type == "docker": #TODO
+            raise NotImplementedError
+        if container_type in spec["image"]:
+            image = spec["image"][container_type]
+        else:
+            raise Exception(f"container name for {container_type} is not "
+                            f"provided in the specification")
     else:
-        raise NotImplementedError
-    
+        raise Exception(f"container_type should be docker or singularity, "
+                        f"but {container_type} provided")
+
+    img = Path(__file__).resolve().parents[0] / f"env/{image}"
+    if not img.exists():
+        # TODO: we should catch the error and try to download the image
+        raise FileNotFoundError(f"the {image} can't be found")
+
+
     #create model_path
-    model_path=get_model_path(model, model_type)
-    
-    if model_type == None:
-        cmd0 = ["singularity","run",img,"python3","nobrainerzoo/download.py",model]
-    else:
-        cmd0 = ["singularity","run",img,"python3","nobrainerzoo/download.py",model,model_type]
-    
+    model_path = get_model_path(model, model_type)
+
+    cmd0 = ["singularity", "run", img, "python3", "nobrainerzoo/download.py", model]
+    if model_type:
+        cmd0.append(model_type)
+
     # download the model using container
-    p0=sp.run(cmd0,stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+    p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
     print(p0.stdout)
-         
+
     # create the command 
-    data_path = os.path.abspath(os.path.dirname(infile))
-    options =["--nv","-B",data_path,"-B","$(pwd):/data","-W", "/data"]
+    data_path = Path(infile).parent
+    out_path = Path(outfile).parent
+
+    # TODO: this will work for singularity only
+    options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
     
-    nb_command = ["predict"]
-    data = [os.path.abspath(infile),os.path.abspath(outfile)]
-        
-    model_options=["-b", str(block_shape[0]),str(block_shape[1]),str(block_shape[2]),
-                   "-r", str(resize_features_to[0]),str(resize_features_to[1]),str(resize_features_to[2]),
-                   "-t", str(threshold)]
+
+    model_options = ["-b"] + [str(el) for el in block_shape] \
+                  + ["-r"] + [str(el) for el in resize_features_to] \
+                  + ["-t", str(threshold)]
     
     # add flag-type options
     if largest_label:
-        model_options = model_options+["-l"]
+        model_options = model_options + ["-l"]
     
     if rotate_and_predict:
-        model_options = model_options+["--rotate-and-predict"]
+        model_options = model_options + ["--rotate-and-predict"]
          
     if verbose:
-        model_options = model_options+["-v"]
+        model_options = model_options + ["-v"]
   
-                 
-    cmd = ["singularity","run"]+options+[img]+["nobrainer"]+nb_command+["-m"]+[model_path]+data+model_options
-    
+    # TODO command should be taken from the spec
+    cmd = ["singularity","run"] + options + [img, "nobrainer", "predict"]\
+        + ["-m"] + [model_path, str(data_path), str(out_path)] + model_options
+
     # run command
-    p1 = sp.run(cmd,stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)            
+    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
     print(p1.stdout)
     
 @cli.command()
