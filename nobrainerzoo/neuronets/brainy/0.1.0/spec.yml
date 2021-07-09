@@ -1,0 +1,5 @@
+image:
+  singularity: nobrainer-zoo_test.sif
+
+inputs:
+  block_shape: {mandatury: False, default: [128, 128, 128]}
