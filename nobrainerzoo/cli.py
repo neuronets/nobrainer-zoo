@@ -112,7 +112,7 @@ def predict(
     # TODO download the image if it is not already downloded
     # set the docker/singularity image
     org, model_nm, ver = model.split("/")
-
+    
     model_dir = Path(__file__).resolve().parents[0] / model
     spec_file = model_dir / "spec.yml"
 
@@ -159,7 +159,6 @@ def predict(
 
     # TODO: this will work for singularity only
     options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
-    
 
     model_options = ["-b"] + [str(el) for el in block_shape] \
                   + ["-r"] + [str(el) for el in resize_features_to] \
@@ -177,7 +176,7 @@ def predict(
   
     # TODO command should be taken from the spec
     cmd = ["singularity","run"] + options + [img, "nobrainer", "predict"]\
-        + ["-m"] + [model_path, str(data_path), str(out_path)] + model_options
+        + ["-m"] + [model_path, infile, outfile] + model_options
 
     # run command
     p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
