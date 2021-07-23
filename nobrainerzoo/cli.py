@@ -141,6 +141,7 @@ def predict(
         # TODO: we should catch the error and try to download the image
         raise FileNotFoundError(f"the {image} can't be found")
 
+    inputs_spec = spec.get("inputs", {})
 
     #create model_path
     model_path = get_model_path(model, model_type)
@@ -160,23 +161,31 @@ def predict(
     # TODO: this will work for singularity only
     options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
 
-    model_options = ["-b"] + [str(el) for el in block_shape] \
-                  + ["-r"] + [str(el) for el in resize_features_to] \
-                  + ["-t", str(threshold)]
-    
-    # add flag-type options
-    if largest_label:
-        model_options = model_options + ["-l"]
-    
-    if rotate_and_predict:
-        model_options = model_options + ["--rotate-and-predict"]
-         
-    if verbose:
-        model_options = model_options + ["-v"]
-  
-    # TODO command should be taken from the spec
-    cmd = ["singularity","run"] + options + [img, "nobrainer", "predict"]\
-        + ["-m"] + [model_path, infile, outfile] + model_options
+    # reading cpec file in order to create oprion for model command
+    model_options = []
+    for name, in_spec in inputs_spec.items():
+        argstr = in_spec.get("argstr", "")
+        value = eval(name)
+        if in_spec.get("is_flag"):
+            if value:
+                model_options.append(argstr)
+            continue
+        elif argstr:
+            model_options.append(argstr)
+
+        if in_spec.get("type") == "list":
+            model_options.extend([str(el) for el in value])
+        else:
+            model_options.append(str(value))
+
+    # reading command from the spec file (allowing for f-string)
+    try:
+        model_cmd = eval(spec["command"])
+    except NameError:
+        model_cmd = spec["command"]
+
+    cmd = ["singularity","run"] + options + [img] + model_cmd.split() \
+        + model_options
 
     # run command
     p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
