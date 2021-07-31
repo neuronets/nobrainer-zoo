@@ -1,4 +1,10 @@
-
+#### container info
+image:
+  singularity: nobrainer-zoo_test.sif
+  
+#### Train script
+train_script: Brainy_Train_Unet.py
+    
 #### general settings
 name: unet_brainy
 is_train: true
