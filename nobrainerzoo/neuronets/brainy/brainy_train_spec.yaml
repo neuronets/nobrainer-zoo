@@ -24,6 +24,7 @@ dataset:
     volume_shape: 256  
     batch_size: 2  # per GPU
     augment: False
+    n_train: 9
     num_parallel_calls: 2 # keeping same as batch size
   test:     #  test params may differ from train params
     name: sample_MGH
@@ -32,6 +33,7 @@ dataset:
     block_shape: 32
     volume_shape: 256
     batch_size: 1
+    n_test: 1
     num_parallel_calls: 1
     augment: False
 
@@ -43,8 +45,8 @@ network:
 train:
   epoch: 5
   lr: .00001  # adam
-  loss: dice
-  metric: dice
+  loss: nobrainer.losses.dice
+  metrics: [nobrainer.metrics.dice, nobrainer.metrics.jaccard]
 
 #### logger
 logger:
