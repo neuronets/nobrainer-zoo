@@ -14,28 +14,25 @@ model: cnn
 device: cuda:0
 
 #### datasets
-dataset:
-  n_classes: 1
-  train:
-    name: sample_MGH
-    data_location: data/
-    shuffle_buffer_size: 10
-    block_shape: 32
-    volume_shape: 256  
-    batch_size: 2  # per GPU
-    augment: False
-    n_train: 9
-    num_parallel_calls: 2 # keeping same as batch size
-  test:     #  test params may differ from train params
-    name: sample_MGH
-    data_location: data/
-    shuffle_buffer_size: 0
-    block_shape: 32
-    volume_shape: 256
-    batch_size: 1
-    n_test: 1
-    num_parallel_calls: 1
-    augment: False
+n_classes: 1
+dataset_train:
+  name: sample_MGH
+  data_location: data/
+  shuffle_buffer_size: 10
+  block_shape: 32
+  volume_shape: 256
+  batch_size: 2  # per GPU
+  augment: False
+  num_parallel_calls: 2 # keeping same as batch sizse\
+dataset_test:     #  test params may differ from train params
+  name: sample_MGH
+  data_location: data/
+  shuffle_buffer_size: 0
+  block_shape: 32
+  volume_shape: 256
+  batch_size: 1
+  num_parallel_calls: 1
+  augment: False
 
 #### network structures
 network:
