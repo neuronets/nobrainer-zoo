@@ -7,6 +7,48 @@ import sys
 
 _option_kwds = {"show_default": True}
 
+
+# https://stackoverflow.com/a/48394004/5666087
+class OptionEatAll(click.Option):
+    """Subclass of `click.Option` that allows for an arbitrary number of options.
+    The behavior is similar to `nargs="*"` in argparse.
+    """
+
+    def __init__(self, *args, **kwargs):
+        nargs = kwargs.pop("nargs", -1)
+        assert nargs == -1, "nargs, if set, must be -1 not {}".format(nargs)
+        super(OptionEatAll, self).__init__(*args, **kwargs)
+        self._previous_parser_process = None
+        self._eat_all_parser = None
+
+    def add_to_parser(self, parser, ctx):
+        def parser_process(value, state):
+            # method to hook to the parser.process
+            done = False
+            value = [value]
+            # grab everything up to the next option
+            while state.rargs and not done:
+                for prefix in self._eat_all_parser.prefixes:
+                    if state.rargs[0].startswith(prefix):
+                        done = True
+                if not done:
+                    value.append(state.rargs.pop(0))
+            value = tuple(value)
+
+            # call the actual process
+            self._previous_parser_process(value, state)
+
+        retval = super(OptionEatAll, self).add_to_parser(parser, ctx)
+        for name in self.opts:
+            our_parser = parser._long_opt.get(name) or parser._short_opt.get(name)
+            if our_parser:
+                self._eat_all_parser = our_parser
+                self._previous_parser_process = our_parser.process
+                our_parser.process = parser_process
+                break
+        return retval
+
+
 @click.group()
 def cli():
     """A collection of neuro imaging deep learning models."""
@@ -212,14 +254,20 @@ def register():
     sys.exit(-2)
 
 @cli.command()
-@click.argument("data_train_pattern")
-@click.argument("data_evaluate_pattern")
+@click.argument("data_train")
+@click.argument("data_evaluate")
 @click.option(
     "-m",
     "--model",
     type=str,
     required=True,
     help="model name. should be in  the form of <org>/<model>",
+    **_option_kwds,
+    )
+@click.option(
+    "--spec_file",
+    type=str,
+    help="path to a spec file (if not set, the default spec is used)",
     **_option_kwds,
     )
 @click.option(
@@ -230,155 +278,49 @@ def register():
     **_option_kwds,
 )
 @click.option(
-    "-v",
-    "--volume-shape",
-    default=256,
-    type=int,
-    nargs=1,
-    help="Shape of volumes for training data.",
-    **_option_kwds,
-)
-@click.option(
-    "-b",
-    "--block-shape",
-    default=32,
-    type=int,
-    nargs=1,
-    help="Shape of sub-volumes for training data.",
-    **_option_kwds,
-)
-@click.option(
     "--n-classes",
-    default=1,
     type=int,
     nargs=1,
     help="Number of classes in labels",
     **_option_kwds,
 )
 @click.option(
-    "--shuffle_buffer_size",
-    default=10,
-    type=int,
-    nargs=1,
-    help="Value to fill the buffer for shuffling",
-    **_option_kwds,
-)
-@click.option(
-    "--batch_size",
-    default=2,
-    type=int,
-    nargs=1,
-    help="Size of batches",
-    **_option_kwds,
-)
-@click.option(
-    "--augment",
-    default=False,
-    is_flag=True,
-    help="Apply augmentation to data",
-    **_option_kwds,
-)
-@click.option(
-    "--n_train",
-    default= None,
-    type=int,
-    nargs=1,
-    help="Number of train samples",
-    **_option_kwds,
-)
-@click.option(
-    "--n_valid",
-    default= None,
-    type=int,
-    nargs=1,
-    help="Number of validation samples",
-    **_option_kwds,
-)
-@click.option(
-    "--num_parallel_calls",
-    default= 1,
-    type=int,
-    nargs=1,
-    help="Number of parallel calls",
-    **_option_kwds,
-)
-@click.option(
-    "--batchnorm",
-    default=True,
-    is_flag=True,
-    help="Apply batch normalization",
-    **_option_kwds,
-)
-@click.option(
-    "--n_epochs",
-    default= 1,
-    type=int,
-    nargs=1,
-    help="Number of epochs for training",
-    **_option_kwds,
-)
-@click.option(
-    "--lr",
-    default= 0.00001,
-    type=float,
-    nargs=1,
-    help="Value for learning rate",
-    **_option_kwds,
-)
-@click.option(
-    "--loss",
+    "--dataset_train",
     type=str,
-    required=True,
-    help="Loss function",
+    cls=OptionEatAll,
+    help="info about training dataset",
     **_option_kwds,
     )
 @click.option(
-    "--metrics",
-    type=list,
-    required=True,
-    help="list of metrics",
-    **_option_kwds,
-    )
-@click.option(
-    "--check_point_model",
+    "--dataset_test",
     type=str,
-    help="Path to save training checkpoints",
+    cls=OptionEatAll,
+    help="info about testing dataset",
     **_option_kwds,
     )
 @click.option(
-    "--save_history",
+    "--train",
     type=str,
-    help="Path to save training results",
+    cls=OptionEatAll,
+    help="training options",
     **_option_kwds,
     )
 @click.option(
-    "--save_model",
+    "--network",
     type=str,
-    required=True,
-    help="Path to save model weights",
+    cls=OptionEatAll,
+    help="network options",
     **_option_kwds,
     )
-def train(
-    *,
-    data_train_pattern,
-    data_evaluate_pattern,
-    model,
-    container_type,
-    volume_shape,
-    block_shape,
-    n_classes,
-    shuffle_buffer_size,
-    batch_size,
-    augment,
-    batchnorm,
-    n_epochs,
-    lr,
-    loss,
-    metrics,
-    check_point_model,
-    save_history,
-    save_model,
-):
+@click.option(
+    "--path",
+    type=str,
+    cls=OptionEatAll,
+    help="paths for saving results",
+    **_option_kwds,
+    )
+def train(model, spec_file, container_type, n_classes, dataset_train, dataset_test,
+          train, network, path, data_train, data_evaluate, **kwrg):
     """
     Train the model with specified parameters.
     
@@ -388,16 +330,34 @@ def train(
     # TODO download the image if it is not already downloded
     # set the docker/singularity image
     org, model_nm = model.split("/")
-    
     model_dir = Path(__file__).resolve().parents[0] / model
-    spec_file = model_dir / f"{model_nm}_train_spec.yaml"
-    
+    if spec_file:
+        spec_file = Path(spec_file).resolve()
+    else:
+        # if no spec_file provided we are using the default spec from the model repo
+        spec_file = model_dir / f"{model_nm}_train_spec.yaml"
+
+    if not spec_file.exists():
         raise Exception("model directory not found")
     if not spec_file.exists():
         raise Exception("spec file doesn't exist")
 
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
+
+    # updating specification with the argument provided in the command line
+    for arg_str in ["n_classes"]:
+        if eval(arg_str) is not None:
+            spec[arg_str] = eval(arg_str)
+
+    for arg_dict in ["dataset_train", "dataset_test", "train", "network", "path"]:
+        if eval(arg_dict) is not None:
+            val_l = eval(eval(arg_dict))
+            val_dict = {}
+            for el in val_l:
+                key, val = el.split("=")
+                val_dict[key] = val
+            spec[arg_dict].update(val_dict)
 
     if container_type in ["singularity", "docker"]:
         if container_type == "docker": #TODO
@@ -415,11 +375,11 @@ def train(
     if not img.exists():
         # TODO: we should catch the error and try to download the image
         raise FileNotFoundError(f"the {image} can't be found")
-                
-    # create the command 
-    data_train_path = Path(data_train_pattern).parent
-    data_valid_path = Path(data_evaluate_pattern).parent    
-    out_path = Path(save_model).parent
+
+    # create the command
+    data_train_path = Path(data_train).parent
+    data_valid_path = Path(data_evaluate).parent
+    out_path = Path(".").parent
     
     bind_paths = f"{data_train_path},{data_valid_path},{out_path}"
     
@@ -427,35 +387,21 @@ def train(
     options =["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
     
     train_script = model_dir / spec["train_script"]
-    
-    train_options = [data_train_pattern,
-                     data_evaluate_pattern,
-                     volume_shape,
-                     block_shape,
-                     n_classes,
-                     shuffle_buffer_size,
-                     batch_size,
-                     augment,
-                     batchnorm,
-                     n_epochs,
-                     lr,
-                     loss,
-                     metrics,
-                     check_point_model,
-                     save_history,
-                     save_model
-                     ]
-    
-    cmd = ["singularity","run"] + options + [img] + [str(train_script)] + train_options
+
+    spec_file_updated = spec_file.parent / "spec_updated.yaml"
+    with spec_file_updated.open("w") as f:
+        yaml.dump(spec, f)
+
+    cmd = ["python", str(train_script)] + ["-config", str(spec_file_updated)]
 
     # run command
     p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+
+    # removing the file with updated spec
+    spec_file_updated.unlink()
     print(p1.stdout)
-        
-    
+
+
 # for debugging purposes    
 if __name__ == "__main__":
-    
     cli()
-    
-    

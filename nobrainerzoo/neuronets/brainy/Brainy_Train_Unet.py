@@ -13,17 +13,17 @@ def main(config):
     Train the brainy model
     """
     # Set parameters
-    n_classes = config['dataset']['n_classes']
-    batch_size = config['dataset']['train']['batch_size']
-    v = config['dataset']['train']['volume_shape']
-    b = config['dataset']['train']['block_shape']
+    n_classes = config['n_classes']
+    batch_size = config['dataset_train']['batch_size']
+    v = config['dataset_train']['volume_shape']
+    b = config['dataset_train']['block_shape']
     volume_shape = (v, v, v)
     block_shape = (b, b, b)
     n_epochs = config['train']['epoch']
-    data_train_pattern = config['dataset']['train']['name']
-    data_evaluate_pattern = config['dataset']['test']['name']
-    n_train = config['dataset']['train']['n_train']
-    n_eval = config['dataset']['test']['n_test']
+    data_train_pattern = config['dataset_train']['name']
+    data_evaluate_pattern = config['dataset_test']['name']
+    n_train = config['dataset_train']['n_train']
+    n_eval = config['dataset_test']['n_test']
     
     if data_train_pattern == 'sample_MGH':
         #Load sample Data--- inputs and labels 
@@ -70,9 +70,9 @@ def main(config):
         volume_shape = volume_shape,
         block_shape = block_shape,
         n_epochs = n_epochs,
-        augment = config['dataset']['train']['augment'],
-        shuffle_buffer_size = config['dataset']['train']['shuffle_buffer_size'],
-        num_parallel_calls = config['dataset']['train']['num_parallel_calls'],
+        augment = config['dataset_train']['augment'],
+        shuffle_buffer_size = config['dataset_train']['shuffle_buffer_size'],
+        num_parallel_calls = config['dataset_train']['num_parallel_calls'],
     )
     
     dataset_evaluate = nobrainer.dataset.get_dataset(
@@ -82,9 +82,9 @@ def main(config):
         volume_shape = volume_shape,
         block_shape = block_shape,
         n_epochs = 1,
-        augment = config['dataset']['test']['augment'],
-        shuffle_buffer_size = config['dataset']['test']['shuffle_buffer_size'],
-        num_parallel_calls = config['dataset']['test']['num_parallel_calls'],
+        augment = config['dataset_test']['augment'],
+        shuffle_buffer_size = config['dataset_test']['shuffle_buffer_size'],
+        num_parallel_calls = config['dataset_test']['num_parallel_calls'],
     )
     
     # TODO: Add multi gpu training option
