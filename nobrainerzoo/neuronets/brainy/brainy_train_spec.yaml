@@ -23,6 +23,7 @@ dataset_train:
   volume_shape: 256
   batch_size: 2  # per GPU
   augment: False
+  n_train: 9
   num_parallel_calls: 2 # keeping same as batch sizse\
 dataset_test:     #  test params may differ from train params
   name: sample_MGH
@@ -31,6 +32,7 @@ dataset_test:     #  test params may differ from train params
   block_shape: 32
   volume_shape: 256
   batch_size: 1
+  n_test: 1
   num_parallel_calls: 1
   augment: False
 
