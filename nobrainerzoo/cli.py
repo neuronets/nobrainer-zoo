@@ -254,8 +254,8 @@ def register():
     sys.exit(-2)
 
 @cli.command()
-@click.argument("data_train")
-@click.argument("data_evaluate")
+@click.argument("data_train_pattern", required=False)
+@click.argument("data_evaluate_pattern", required=False)
 @click.option(
     "-m",
     "--model",
@@ -320,7 +320,7 @@ def register():
     **_option_kwds,
     )
 def train(model, spec_file, container_type, n_classes, dataset_train, dataset_test,
-          train, network, path, data_train, data_evaluate, **kwrg):
+          train, network, path, data_train_pattern, data_evaluate_pattern, **kwrg):
     """
     Train the model with specified parameters.
     
@@ -376,13 +376,21 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
         # TODO: we should catch the error and try to download the image
         raise FileNotFoundError(f"the {image} can't be found")
 
-    # create the command
-    data_train_path = Path(data_train).parent
-    data_valid_path = Path(data_evaluate).parent
-    out_path = Path(".").parent
-    
-    bind_paths = f"{data_train_path},{data_valid_path},{out_path}"
-    
+
+    if data_train_pattern and data_evaluate_pattern:
+        data_train_path = Path(data_train_pattern).resolve().parent
+        spec["data_train_pattern"] = str(Path(data_train_pattern).resolve())
+        data_valid_path = Path(data_evaluate_pattern).resolve().parent
+        spec["data_valid_pattern"] = str(Path(data_train_pattern).resolve())
+        bind_paths = f"{data_train_path},{data_valid_path}"
+    elif data_train_pattern or data_evaluate_pattern:
+        raise Exception(f"please provide both data_train_pattern and data_evaluate_pattern,"
+                        f" or neither if you want to use the sample data")
+    else: # if data_train_pattern not provided, the sample data is used
+        data_path = Path(__file__).resolve().parents[0] / "data"
+        bind_paths = f"{data_path}"
+
+    out_path = Path(".").resolve().parent
     # TODO: this will work for singularity only
     options =["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
     
@@ -393,9 +401,9 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
         yaml.dump(spec, f)
 
     cmd = ["python", str(train_script)] + ["-config", str(spec_file_updated)]
-
+    cmd_sing = ["singularity", "run"] + options + [img] + cmd
     # run command
-    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+    p1 = sp.run(cmd_sing, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
 
     # removing the file with updated spec
     spec_file_updated.unlink()
