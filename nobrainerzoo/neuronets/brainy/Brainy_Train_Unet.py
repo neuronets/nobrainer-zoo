@@ -20,12 +20,23 @@ def main(config):
     volume_shape = (v, v, v)
     block_shape = (b, b, b)
     n_epochs = config['train']['epoch']
-    data_train_pattern = config['dataset_train']['name']
-    data_evaluate_pattern = config['dataset_test']['name']
     n_train = config['dataset_train']['n_train']
     n_eval = config['dataset_test']['n_test']
-    
-    if data_train_pattern == 'sample_MGH':
+
+    if config.get("data_train_pattern") and config.get("data_valid_pattern"):
+        data_train_pattern = config["data_train_pattern"]
+        data_valid_pattern = config["data_valid_pattern"]
+        if (data_train_pattern.split(".")[-1] not in ["tfrec", "tfrecord"])\
+                or (data_valid_pattern.split(".")[-1] not in ["tfrec", "tfrecord"]):
+            # TODO: write tfrecords from csv file given by user
+            raise ValueError("can't use non-tfrecord format data."
+                             "convert your data in the form of tfrecords with"
+                             "'nobrainer.tfrecord.write'")
+    else: # using sample data if no patterns provided by the user
+        # checking sample_data from the config file
+        if config.get("sample_data") != 'sample_MGH':
+            raise ValueError(f"only sample_MGH can be used as sample_data, "
+                             f"but {config.get('sample_data')} provided")
         #Load sample Data--- inputs and labels 
         csv_of_filepaths = nobrainer.utils.get_data()
         filepaths = nobrainer.io.read_csv(csv_of_filepaths)
@@ -56,12 +67,7 @@ def main(config):
             examples_per_shard=1)
         
         data_evaluate_pattern = "data/data-evaluate_shard-*.tfrec"
-        
-    else: # TODO: write tfrecords from csv file given by user
-        raise ValueError("can't train on non-tfrecord format data." 
-                         "convert your data in the form of tfrecords with"
-                         "'nobrainer.tfrecord.write'")
-    
+
     # Create and Load Datasets for training and validation
     dataset_train = nobrainer.dataset.get_dataset(
         file_pattern = data_train_pattern,
