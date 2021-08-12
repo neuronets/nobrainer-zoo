@@ -27,7 +27,7 @@ Inference with default options,
 nobrainer-zoo predict -m neuronets/brainy/0.1.0 <path_to_input> <path_to_save_output>
 ```
 
-# Train Exam
+# Train Example
 
 For training with sample dataset you do not need to pass any dataset pattern
 
