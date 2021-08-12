@@ -24,13 +24,25 @@ nobrainer-zoo train --help
 Inference with default options,
 
 ```
-nobrainerzoo predict -m neuronets\brainy\0.1.0 <path_to_input> <path_to_save_output>
+nobrainer-zoo predict -m neuronets/brainy/0.1.0 <path_to_input> <path_to_save_output>
 ```
 
-# Train Example
+# Train Exam
 
-Training brainy model with sample data,
+For training with sample dataset you do not need to pass any dataset pattern
 
 ```
-nobrainer-zoo train sample_MGH sample_MGH -m neuronets/brainy
+nobrainer-zoo train -m neuronets/brainy
+```
+
+To train the network with your own data pass the dataset pattern in the form of tfrecords.
+
+```
+nobrainer-zoo train -m neuronets/brainy <data_train_pattern> <data_evaluate_pattern>
+```
+
+Other parameters are also can be changed by providing a spec file or changing them with cli command.
+
+```
+nobrainer-zoo train -m neuronets/brainy --spec_file <path_to_spec_file>
 ```
