@@ -345,7 +345,13 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
             val_dict = {}
             for el in val_l:
                 key, val = el.split("=")
-                val_dict[key] = val
+                # if the field is in the spec file, the type from the spec
+                # is used to convert the value provided from cli
+                if key in spec[arg_dict]:
+                    tp = type(spec[arg_dict][key])
+                    val_dict[key] = tp(val)
+                else:
+                    val_dict[key] = val
             spec[arg_dict].update(val_dict)
 
     if data_train_pattern and data_evaluate_pattern:
