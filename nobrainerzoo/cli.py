@@ -156,7 +156,7 @@ def predict(
     org, model_nm, ver = model.split("/")
     
     model_dir = Path(__file__).resolve().parents[0] / model
-    spec_file = model_dir / "spec.yml"
+    spec_file = model_dir / "spec.yaml"
 
     if not model_dir.exists():
         raise Exception("model directory not found")
