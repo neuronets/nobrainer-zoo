@@ -149,7 +149,7 @@ def main(config):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     model.save_weights(os.path.join(save_path,'weights_brainy_unet.hdf5' ))
-    print("Model is saved at {}".format(save_path))
+    print("Model is saved at {}".format(os.path.join(save_path,'weights_brainy_unet.hdf5' )))
     
     # TODO: Add loading a pretrained model for transfer learning 
         
