@@ -1,0 +1,14 @@
+image:
+  singularity: nobrainer-zoo_test.sif
+
+command: f"nobrainer predict -m {model_path} {infile} {outfile}"
+
+
+# TODO: it's not used to create the cli itself
+inputs:
+  block_shape: {mandatury: False, default: [128, 128, 128], argstr: "-b", type: "list"}
+  resize_features_to: {mandatury: False, argstr: "-r", type: "list"}
+  threshold: {mandatory: False, default: 0.3, argstr: "-t"}
+  rotate_and_predict: {argstr: "--rotate-and-predict", is_flag: true}
+  largest_label: {arstr: "-l", is_flag: true}
+  verbose: {argstr: "-v", is_flag: true}

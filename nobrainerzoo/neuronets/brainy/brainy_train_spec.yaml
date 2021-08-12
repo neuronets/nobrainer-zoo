@@ -1,0 +1,58 @@
+#### container info
+image:
+  singularity: nobrainer-zoo_test.sif
+  docker: hodadock/nobrainer-zoo:test
+  
+#### Train script
+train_script: Brainy_Train_Unet.py
+
+# the sample data used if data_patterns is not provided by the user
+sample_data: sample_MGH
+
+#### general settings
+name: unet_brainy
+is_train: true
+#use_visdom: false # for visualization
+#visdom_port: 8067  
+model: cnn
+device: cuda:0
+
+#### datasets
+n_classes: 1
+dataset_train:
+  data_location: data/
+  shuffle_buffer_size: 10
+  block_shape: 32
+  volume_shape: 256
+  batch_size: 2  # per GPU
+  augment: False
+  n_train: 9
+  num_parallel_calls: 2 # keeping same as batch sizse\
+dataset_test:     #  test params may differ from train params
+  data_location: data/
+  shuffle_buffer_size: 0
+  block_shape: 32
+  volume_shape: 256
+  batch_size: 1
+  n_test: 1
+  num_parallel_calls: 1
+  augment: False
+
+#### network structures
+network:
+  model: unet
+  batchnorm: True
+#### training settings: learning rate scheme, loss
+train:
+  epoch: 5
+  lr: .00001  # adam
+  loss: nobrainer.losses.dice
+  metrics: [nobrainer.metrics.dice, nobrainer.metrics.jaccard]
+
+#### logger
+logger:
+  ckpt_path: ckpts/
+  
+path:
+  save_model: model/
+  pretrained_model: none

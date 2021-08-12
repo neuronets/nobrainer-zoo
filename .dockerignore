@@ -1,0 +1,9 @@
+Dockerfile
+Dockerfile.gpu
+README.md
+ams_inference.py
+bayesian_inference_general.py
+brainy_inference.py
+synthseg_container_predict.py
+synthseg_predict.py
+utils.py
