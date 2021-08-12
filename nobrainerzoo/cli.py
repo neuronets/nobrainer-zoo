@@ -3,7 +3,7 @@ import subprocess as sp
 from pathlib import Path
 import click
 import yaml
-import sys
+import sys, shutil
 
 _option_kwds = {"show_default": True}
 
@@ -156,7 +156,7 @@ def predict(
     org, model_nm, ver = model.split("/")
     
     model_dir = Path(__file__).resolve().parents[0] / model
-    spec_file = model_dir / "spec.yml"
+    spec_file = model_dir / "spec.yaml"
 
     if not model_dir.exists():
         raise Exception("model directory not found")
@@ -166,29 +166,15 @@ def predict(
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
 
-    if container_type in ["singularity", "docker"]:
-        if container_type == "docker": #TODO
-            raise NotImplementedError
-        if container_type in spec["image"]:
-            image = spec["image"][container_type]
-        else:
-            raise Exception(f"container name for {container_type} is not "
-                            f"provided in the specification")
-    else:
-        raise Exception(f"container_type should be docker or singularity, "
-                        f"but {container_type} provided")
-
-    img = Path(__file__).resolve().parents[0] / f"env/{image}"
-    if not img.exists():
-        # TODO: we should catch the error and try to download the image
-        raise FileNotFoundError(f"the {image} can't be found")
+    image = _container_check(container_type=container_type, image_spec=spec.get("image"),
+                             docker_ok=False)
 
     inputs_spec = spec.get("inputs", {})
 
     #create model_path
     model_path = get_model_path(model, model_type)
 
-    cmd0 = ["singularity", "run", img, "python3", "nobrainerzoo/download.py", model]
+    cmd0 = ["singularity", "run", image, "python3", "nobrainerzoo/download.py", model]
     if model_type:
         cmd0.append(model_type)
 
@@ -199,9 +185,6 @@ def predict(
     # create the command 
     data_path = Path(infile).parent
     out_path = Path(outfile).parent
-
-    # TODO: this will work for singularity only
-    options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
 
     # reading spec file in order to create oprion for model command
     model_options = []
@@ -226,13 +209,17 @@ def predict(
     except NameError:
         model_cmd = spec["command"]
 
-    cmd = ["singularity","run"] + options + [img] + model_cmd.split() \
+    # TODO: this will work for singularity only
+    options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
+
+    cmd = ["singularity","run"] + options + [image] + model_cmd.split() \
         + model_options
 
     # run command
     p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
     print(p1.stdout)
-    
+
+
 @cli.command()
 def generate():
     """
@@ -242,7 +229,8 @@ def generate():
         "Not implemented yet. In the future, this command will be used to generate output from GAN models."
     )
     sys.exit(-2)
-    
+
+
 @cli.command()
 def register():
     """
@@ -252,6 +240,7 @@ def register():
         "Not implemented yet. In the future, this command will be used for brain registration."
     )
     sys.exit(-2)
+
 
 @cli.command()
 @click.argument("data_train_pattern", required=False)
@@ -359,55 +348,87 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
                 val_dict[key] = val
             spec[arg_dict].update(val_dict)
 
-    if container_type in ["singularity", "docker"]:
-        if container_type == "docker": #TODO
-            raise NotImplementedError
-        if container_type in spec["image"]:
-            image = spec["image"][container_type]
-        else:
-            raise Exception(f"container name for {container_type} is not "
-                            f"provided in the specification")
-    else:
-        raise Exception(f"container_type should be docker or singularity, "
-                        f"but {container_type} provided")
-
-    img = Path(__file__).resolve().parents[0] / f"env/{image}"
-    if not img.exists():
-        # TODO: we should catch the error and try to download the image
-        raise FileNotFoundError(f"the {image} can't be found")
-
-
     if data_train_pattern and data_evaluate_pattern:
         data_train_path = Path(data_train_pattern).resolve().parent
         spec["data_train_pattern"] = str(Path(data_train_pattern).resolve())
         data_valid_path = Path(data_evaluate_pattern).resolve().parent
         spec["data_valid_pattern"] = str(Path(data_train_pattern).resolve())
-        bind_paths = f"{data_train_path},{data_valid_path}"
+        bind_paths = [str(data_train_path), str(data_valid_path)]
     elif data_train_pattern or data_evaluate_pattern:
         raise Exception(f"please provide both data_train_pattern and data_evaluate_pattern,"
                         f" or neither if you want to use the sample data")
     else: # if data_train_pattern not provided, the sample data is used
         data_path = Path(__file__).resolve().parents[0] / "data"
-        bind_paths = f"{data_path}"
+        bind_paths = [str(data_path)]
 
     out_path = Path(".").resolve().parent
-    # TODO: this will work for singularity only
-    options =["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
-    
+
     train_script = model_dir / spec["train_script"]
+    bind_paths.append(str(train_script.resolve().parent))
 
     spec_file_updated = spec_file.parent / "spec_updated.yaml"
     with spec_file_updated.open("w") as f:
         yaml.dump(spec, f)
 
     cmd = ["python", str(train_script)] + ["-config", str(spec_file_updated)]
-    cmd_sing = ["singularity", "run"] + options + [img] + cmd
+
+    image = _container_check(container_type=container_type, image_spec=spec.get("image"))
+    if container_type == "singularity":
+        bind_paths = ",".join(bind_paths)
+        options = ["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
+        cmd_cont = ["singularity", "run"] + options + [image] + cmd
+    elif container_type == "docker":
+        bind_paths_docker = []
+        for el in bind_paths:
+            bind_paths_docker += ["-v", f"{el}:{el}"]
+        options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
+        cmd_cont = ["docker", "run"] + options + [image] + cmd
+
+
     # run command
-    p1 = sp.run(cmd_sing, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+    p1 = sp.run(cmd_cont, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
 
     # removing the file with updated spec
     spec_file_updated.unlink()
     print(p1.stdout)
+
+
+
+def _container_check(container_type, image_spec, docker_ok=True):
+    if image_spec is None:
+        raise Exception("image not provided in the specification")
+
+    if container_type == "singularity":
+        if shutil.which("singularity") is None:
+            raise Exception("singularity is not installed")
+        if container_type in image_spec:
+            image = image_spec[container_type]
+            image = Path(__file__).resolve().parents[0] / f"env/{image}"
+            if not image.exists():
+                # TODO: we should catch the error and try to download the image
+                raise FileNotFoundError(f"the {image} can't be found")
+        else:
+            raise Exception(f"container name for {container_type} is not "
+                            f"provided in the specification, "
+                            f"try using container_type=docker")
+    elif container_type == "docker":
+        if not docker_ok:
+            raise NotImplementedError("the command is not implemented to work with "
+                                      "docker, try singularity")
+        if shutil.which("docker") is None or sp.call(["docker", "info"]):
+            raise Exception("docker is not installed")
+        if container_type in image_spec:
+            image = image_spec[container_type]
+        else:
+            raise Exception(f"container name for {container_type} is not "
+                            f"provided in the specification, "
+                            f"try using container_type=singularity")
+
+    else:
+        raise Exception(f"container_type should be docker or singularity, "
+                        f"but {container_type} provided")
+
+    return image
 
 
 # for debugging purposes    

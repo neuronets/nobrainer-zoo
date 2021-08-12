@@ -1,6 +1,7 @@
 #### container info
 image:
   singularity: nobrainer-zoo_test.sif
+  docker: hodadock/nobrainer-zoo:test
   
 #### Train script
 train_script: Brainy_Train_Unet.py
