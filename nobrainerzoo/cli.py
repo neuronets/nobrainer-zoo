@@ -399,8 +399,8 @@ def _container_check(container_type, image_spec, docker_ok=True):
         raise Exception("image not provided in the specification")
 
     if container_type == "singularity":
-        # if shutil.which("singularity") is None:
-        #     raise Exception("singularity is not installed")
+        if shutil.which("singularity") is None:
+            raise Exception("singularity is not installed")
         if container_type in image_spec:
             image = image_spec[container_type]
             image = Path(__file__).resolve().parents[0] / f"env/{image}"
