@@ -38,11 +38,15 @@ nobrainer-zoo train -m neuronets/brainy
 To train the network with your own data pass the dataset pattern in the form of tfrecords.
 
 ```
-nobrainer-zoo train -m neuronets/brainy <data_train_pattern> <data_evaluate_pattern>
+nobrainer-zoo train -m neuronets/brainy "<data_train_pattern>" "<data_evaluate_pattern>"
 ```
 
 Other parameters are also can be changed by providing a spec file or changing them with cli command.
 
 ```
 nobrainer-zoo train -m neuronets/brainy --spec_file <path_to_spec_file>
+```
+
+```
+nobrainer-zoo train -m neuronets/brainy --train epoch=2
 ```
