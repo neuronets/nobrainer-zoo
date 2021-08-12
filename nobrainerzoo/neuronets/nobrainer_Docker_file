@@ -6,8 +6,8 @@ RUN curl -sSL http://neuro.debian.net/lists/bionic.us-nh.full | tee /etc/apt/sou
   && apt-get update \
   && apt-get install -y git-annex-standalone git \
   && rm -rf /tmp/*
-RUN python3 -m pip install --no-cache-dir nobrainer datalad datalad-osf
+RUN python3 -m pip install --no-cache-dir nobrainer datalad datalad-osf PyYAML
 ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 WORKDIR "/work"
-LABEL maintainer="Jakub Kaczmarzyk <jakub.kaczmarzyk@gmail.com>"
+LABEL maintainer="Jakub Kaczmarzyk <jakub.kaczmarzyk@gmail.com>, Hoda Rajaei <rajaei.hoda@gmail.com>"
