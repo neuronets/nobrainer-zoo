@@ -166,29 +166,15 @@ def predict(
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
 
-    if container_type in ["singularity", "docker"]:
-        if container_type == "docker": #TODO
-            raise NotImplementedError
-        if container_type in spec["image"]:
-            image = spec["image"][container_type]
-        else:
-            raise Exception(f"container name for {container_type} is not "
-                            f"provided in the specification")
-    else:
-        raise Exception(f"container_type should be docker or singularity, "
-                        f"but {container_type} provided")
-
-    img = Path(__file__).resolve().parents[0] / f"env/{image}"
-    if not img.exists():
-        # TODO: we should catch the error and try to download the image
-        raise FileNotFoundError(f"the {image} can't be found")
+    image = _container_check(container_type=container_type, image_spec=spec.get("image"),
+                             docker_ok=False)
 
     inputs_spec = spec.get("inputs", {})
 
     #create model_path
     model_path = get_model_path(model, model_type)
 
-    cmd0 = ["singularity", "run", img, "python3", "nobrainerzoo/download.py", model]
+    cmd0 = ["singularity", "run", image, "python3", "nobrainerzoo/download.py", model]
     if model_type:
         cmd0.append(model_type)
 
@@ -199,9 +185,6 @@ def predict(
     # create the command 
     data_path = Path(infile).parent
     out_path = Path(outfile).parent
-
-    # TODO: this will work for singularity only
-    options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
 
     # reading spec file in order to create oprion for model command
     model_options = []
@@ -226,7 +209,10 @@ def predict(
     except NameError:
         model_cmd = spec["command"]
 
-    cmd = ["singularity","run"] + options + [img] + model_cmd.split() \
+    # TODO: this will work for singularity only
+    options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
+
+    cmd = ["singularity","run"] + options + [image] + model_cmd.split() \
         + model_options
 
     # run command
@@ -362,17 +348,6 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
                 val_dict[key] = val
             spec[arg_dict].update(val_dict)
 
-    if container_type in ["singularity", "docker"]:
-        if container_type in spec["image"]:
-            image = spec["image"][container_type]
-        else:
-            raise Exception(f"container name for {container_type} is not "
-                            f"provided in the specification")
-    else:
-        raise Exception(f"container_type should be docker or singularity, "
-                        f"but {container_type} provided")
-
-
     if data_train_pattern and data_evaluate_pattern:
         data_train_path = Path(data_train_pattern).resolve().parent
         spec["data_train_pattern"] = str(Path(data_train_pattern).resolve())
@@ -397,19 +372,12 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
 
     cmd = ["python", str(train_script)] + ["-config", str(spec_file_updated)]
 
+    image = _container_check(container_type=container_type, image_spec=spec.get("image"))
     if container_type == "singularity":
-        if shutil.which("singularity") is None:
-            raise Exception("singularity is not installed")
-        img_file = Path(__file__).resolve().parents[0] / f"env/{image}"
-        if not img_file.exists():
-            # TODO: we should catch the error and try to download the image
-            raise FileNotFoundError(f"the {image} can't be found")
         bind_paths = ",".join(bind_paths)
         options = ["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
-        cmd_cont = ["singularity", "run"] + options + [img_file] + cmd
+        cmd_cont = ["singularity", "run"] + options + [image] + cmd
     elif container_type == "docker":
-        if shutil.which("docker") is None or sp.call(["docker", "info"]):
-            raise Exception("docker is not installed")
         bind_paths_docker = []
         for el in bind_paths:
             bind_paths_docker += ["-v", f"{el}:{el}"]
@@ -423,6 +391,44 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
     # removing the file with updated spec
     spec_file_updated.unlink()
     print(p1.stdout)
+
+
+
+def _container_check(container_type, image_spec, docker_ok=True):
+    if image_spec is None:
+        raise Exception("image not provided in the specification")
+
+    if container_type == "singularity":
+        # if shutil.which("singularity") is None:
+        #     raise Exception("singularity is not installed")
+        if container_type in image_spec:
+            image = image_spec[container_type]
+            image = Path(__file__).resolve().parents[0] / f"env/{image}"
+            if not image.exists():
+                # TODO: we should catch the error and try to download the image
+                raise FileNotFoundError(f"the {image} can't be found")
+        else:
+            raise Exception(f"container name for {container_type} is not "
+                            f"provided in the specification, "
+                            f"try using container_type=docker")
+    elif container_type == "docker":
+        if not docker_ok:
+            raise NotImplementedError("the command is not implemented to work with "
+                                      "docker, try singularity")
+        if shutil.which("docker") is None or sp.call(["docker", "info"]):
+            raise Exception("docker is not installed")
+        if container_type in image_spec:
+            image = image_spec[container_type]
+        else:
+            raise Exception(f"container name for {container_type} is not "
+                            f"provided in the specification, "
+                            f"try using container_type=singularity")
+
+    else:
+        raise Exception(f"container_type should be docker or singularity, "
+                        f"but {container_type} provided")
+
+    return image
 
 
 # for debugging purposes    
