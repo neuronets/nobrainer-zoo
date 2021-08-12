@@ -353,12 +353,12 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
                 else:
                     val_dict[key] = val
             spec[arg_dict].update(val_dict)
-
+            
     if data_train_pattern and data_evaluate_pattern:
         data_train_path = Path(data_train_pattern).resolve().parent
         spec["data_train_pattern"] = str(Path(data_train_pattern).resolve())
         data_valid_path = Path(data_evaluate_pattern).resolve().parent
-        spec["data_valid_pattern"] = str(Path(data_train_pattern).resolve())
+        spec["data_valid_pattern"] = str(Path(data_evaluate_pattern).resolve())
         bind_paths = [str(data_train_path), str(data_valid_path)]
     elif data_train_pattern or data_evaluate_pattern:
         raise Exception(f"please provide both data_train_pattern and data_evaluate_pattern,"
@@ -392,6 +392,7 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
 
 
     # run command
+    print("training the model ........")
     p1 = sp.run(cmd_cont, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
 
     # removing the file with updated spec

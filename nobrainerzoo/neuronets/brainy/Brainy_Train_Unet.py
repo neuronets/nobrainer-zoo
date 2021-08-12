@@ -20,14 +20,14 @@ def main(config):
     volume_shape = (v, v, v)
     block_shape = (b, b, b)
     n_epochs = config['train']['epoch']
-    n_train = config['dataset_train']['n_train']
-    n_eval = config['dataset_test']['n_test']
+    n_train = config['dataset_train']['n_train'] #ToDo: it is required when using user data
+    n_eval = config['dataset_test']['n_test'] #ToDo: it is required when using user data
 
     if config.get("data_train_pattern") and config.get("data_valid_pattern"):
         data_train_pattern = config["data_train_pattern"]
-        data_valid_pattern = config["data_valid_pattern"]
+        data_evaluate_pattern = config["data_valid_pattern"]
         if (data_train_pattern.split(".")[-1] not in ["tfrec", "tfrecord"])\
-                or (data_valid_pattern.split(".")[-1] not in ["tfrec", "tfrecord"]):
+                or (data_evaluate_pattern.split(".")[-1] not in ["tfrec", "tfrecord"]):
             # TODO: write tfrecords from csv file given by user
             raise ValueError("can't use non-tfrecord format data."
                              "convert your data in the form of tfrecords with"
@@ -69,7 +69,7 @@ def main(config):
             examples_per_shard=1)
         
         data_evaluate_pattern = str(data_dir / "data-evaluate_shard-*.tfrec")
-
+       
     # Create and Load Datasets for training and validation
     dataset_train = nobrainer.dataset.get_dataset(
         file_pattern = data_train_pattern,
@@ -149,6 +149,7 @@ def main(config):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     model.save_weights(os.path.join(save_path,'weights_brainy_unet.hdf5' ))
+    print("Model is saved at {}".format(save_path))
     
     # TODO: Add loading a pretrained model for transfer learning 
         
