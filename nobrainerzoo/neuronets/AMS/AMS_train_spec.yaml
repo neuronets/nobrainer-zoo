@@ -44,7 +44,6 @@ network:
   batchnorm: True
 #### training settings: learning rate scheme, loss
 train:
-  model_path: models/brainy_weights.h5
   epoch: 5
   lr: .00001  # adam
   loss: nobrainer.losses.dice
