@@ -101,8 +101,8 @@ def main(config):
     model = nobrainer.models.unet(n_classes=n_classes, 
                                   input_shape=(*block_shape, 1),
                                   batchnorm = config['network']['batchnorm'],)
-    if config['train']['model_path']: 
-        model.load_weights(config['train']['model_path'])
+    if config['path']['pretrained_model']: 
+        model.load_weights(config['path']['pretrained_model'])
     optimizer = tf.keras.optimizers.Adam(learning_rate = config['train']['lr'])
     model.compile(optimizer=optimizer,
                   loss= eval(config['train']['loss']),
