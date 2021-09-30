@@ -157,36 +157,44 @@ def predict(
     
     model_dir = Path(__file__).resolve().parents[0] / model
     spec_file = model_dir / "spec.yaml"
-
+    
     if not model_dir.exists():
         raise Exception("model directory not found")
     if not spec_file.exists():
         raise Exception("spec file doesn't exist")
-
+  
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
 
+
     image = _container_check(container_type=container_type, image_spec=spec.get("image"),
-                             docker_ok=False)
-
+                              docker_ok=False)
+    
+    breakpoint()
     inputs_spec = spec.get("inputs", {})
+    
+    # downloading the nobrainer models are different
+    if org == "neuronets":
+        #create model_path
+        model_path = get_model_path(model, model_type)
 
-    #create model_path
-    model_path = get_model_path(model, model_type)
-
-    cmd0 = ["singularity", "run", image, "python3", "nobrainerzoo/download.py", model]
-    if model_type:
-        cmd0.append(model_type)
-
-    # download the model using container
-    p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-    print(p0.stdout)
+        cmd0 = ["singularity", "run", image, "python3", "nobrainerzoo/download.py", model]
+        if model_type:
+            cmd0.append(model_type)
+            
+        # download the model using container
+        p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+        print(p0.stdout)               
+    else:
+        from download import get_repo
+        repo_url = spec["repo_url"]
+        get_repo(org, model_nm, repo_url)
 
     # create the command 
     data_path = Path(infile).parent
     out_path = Path(outfile).parent
 
-    # reading spec file in order to create oprion for model command
+    # reading spec file in order to create options for model command
     model_options = []
     for name, in_spec in inputs_spec.items():
         argstr = in_spec.get("argstr", "")

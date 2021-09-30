@@ -1,0 +1,15 @@
+image:
+  singularity: UCL_image.sif
+  
+repo_url: "git@github.com:BBillot/SynthSeg.git"
+
+command: f"python UCL/org_repo/SynthSeg/scripts/commands/SynthSeg_predict.py {infile} {outfile}"
+
+# TODO: it's not used to create the cli itself
+inputs:
+  post: {mandatury: False, type: "str"}
+  vol: {mandatury: False, argstr: "-r", type: "str"}
+  resample: {mandatory: False, type: "int"}
+  cpu: {mandatory: False, is_flag: true}
+  threads: {mandatory: False, type: "int"}
+  crop: {mandatory: False, argstr: "-v", is_flag: true}
