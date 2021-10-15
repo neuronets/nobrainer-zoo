@@ -19,12 +19,27 @@ nobrainer-zoo predict --help
 nobrainer-zoo train --help
 ```
 
+# Available models
+
+- [brainy](https://github.com/neuronets/brainy): 3D U-Net brain extraction model (available for train and inference)
+- [SynthSeg](https://github.com/BBillot/SynthSeg): Contrast and resolution 3D brain segmentation model (available for inference)
+
 # Inference Example
 
 Inference with default options,
 
 ```
 nobrainer-zoo predict -m neuronets/brainy/0.1.0 <path_to_input> <path_to_save_output>
+
+nobrainer-zoo predict -m UCL/SynthSeg/0.1 <path_to_input> <path_to_save_output>
+```
+
+pass the model specific options with `--options` argument to the model.
+
+```
+nobrainer-zoo predict -m neuronets/brainy/0.1.0 <path_to_input> <path_to_save_output> --options verbose block_shape=[128,128,128]
+
+nobrainer-zoo predict -m UCL/SynthSeg/0.1 <path_to_input> <path_to_save_output> --options post=<path_to_posteriors>
 ```
 
 # Train Example
