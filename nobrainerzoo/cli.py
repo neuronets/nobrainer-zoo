@@ -141,9 +141,14 @@ def predict(
     # reading spec file in order to create options for model command
     options_spec = spec.get("options", {})
     
+    # create model_path
+    # it is used by neuronets models 
+    model_path = get_model_path(model, model_type)
+    
+    # TODO: sould we check if an option is mandatory?
     model_options = []
-    if eval(options) is not None:
-        val_l = eval(options)
+    if eval("options") is not None:
+        val_l = eval(eval("options"))
         val_dict = {}
         for el in  val_l:
             if "=" in el:
@@ -156,7 +161,7 @@ def predict(
         for name, in_spec in options_spec.items():
             if name in val_dict.keys():
                 argstr = in_spec.get("argstr", "")
-                value  = val_dict[name]
+                value = val_dict[name]
                 if in_spec.get("is_flag"):
                     model_options.append(argstr)
                     continue
@@ -164,7 +169,7 @@ def predict(
                     model_options.append(argstr)
 
                 if in_spec.get("type") == "list":
-                    model_options.extend([str(el) for el in value])
+                    model_options.extend([str(el) for el in eval(value)])
                 else:
                     model_options.append(str(value))
 
@@ -298,7 +303,7 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
 
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
-        
+    
     # updating specification with the argument provided in the command line
     for arg_str in ["n_classes"]:
         if eval(arg_str) is not None:

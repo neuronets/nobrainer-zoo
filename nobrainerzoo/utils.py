@@ -68,4 +68,4 @@ def get_repo(org, repo_url):
         print(p0.stdout)
         print(f"{org} repository is downloaded")
     else:
-        print(f"{org} repository was available locally")
+        print(f"{org} repository is available locally")

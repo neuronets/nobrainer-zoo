@@ -4,7 +4,7 @@ image:
 repo_url: "git@github.com:BBillot/SynthSeg.git"
 
 command: f"python nobrainerzoo/UCL/SynthSeg/0.1/predict.py --i {infile} --o {outfile}"
-
+# TODO: we should add help for options.
 options: 
   post: {mandatory: False, argstr: "--post", type: "str"}
   resample: {mandatory: False, argstr: "--resample", type: "str"}
