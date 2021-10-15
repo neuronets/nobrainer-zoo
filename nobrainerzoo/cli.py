@@ -1,4 +1,4 @@
-from nobrainerzoo.utils import get_model_path
+from nobrainerzoo.utils import get_model_path, get_repo
 import subprocess as sp
 from pathlib import Path
 import click
@@ -80,69 +80,20 @@ def cli():
     **_option_kwds,
 )
 @click.option(
-    "-b",
-    "--block-shape",
-    default=(128, 128, 128),
-    type=int,
-    nargs=3,
-    help="Shape of sub-volumes on which to predict.",
+    "--options",
+    type=str,
+    cls=OptionEatAll,
+    help="Model-specific options",
     **_option_kwds,
-)
-@click.option(
-    "-r",
-    "--resize-features-to",
-    default=(256, 256, 256),
-    type=int,
-    nargs=3,
-    help="Resize features to this size before taking blocks and predicting.",
-    **_option_kwds,
-)
-@click.option(
-    "-t",
-    "--threshold",
-    type=float,
-    default=0.3,
-    help=(
-        "Threshold used to binarize model output. Only used in binary prediction and"
-        " must be in (0, 1)."
-    ),
-    **_option_kwds,
-)
-@click.option(
-    "-l",
-    "--largest-label",
-    is_flag=True,
-    help=(
-        "Zero out all values not connected to the largest contiguous label (not"
-        " including 0 values). This remove false positives in binary prediction."
-    ),
-    **_option_kwds,
-)
-@click.option(
-    "--rotate-and-predict",
-    is_flag=True,
-    help=(
-        "Average the prediction with a prediction on a rotated (and subsequently"
-        " un-rotated) volume. This can produce a better overall prediction."
-    ),
-    **_option_kwds,
-)
-@click.option(
-    "-v", "--verbose", is_flag=True, help="Print progress bar.", **_option_kwds
 )
 def predict(
-    *,
     infile,
     outfile,
     model,
     model_type,
     container_type,
-    block_shape,
-    resize_features_to,
-    threshold,
-    largest_label,
-    rotate_and_predict,
-    verbose
+    options,
+    **kwrg
 ):
     """
     get the prediction from model.
@@ -166,50 +117,56 @@ def predict(
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
 
-
     image = _container_check(container_type=container_type, image_spec=spec.get("image"),
                               docker_ok=False)
     
-    breakpoint()
-    inputs_spec = spec.get("inputs", {})
-    
-    # downloading the nobrainer models are different
-    if org == "neuronets":
-        #create model_path
-        model_path = get_model_path(model, model_type)
-
-        cmd0 = ["singularity", "run", image, "python3", "nobrainerzoo/download.py", model]
-        if model_type:
-            cmd0.append(model_type)
+    download_image = Path(__file__).resolve().parents[0] / "env/nobrainer-zoo_test.sif"
+    cmd0 = ["singularity", "run", download_image, "python3", "nobrainerzoo/download.py", model]
+    if model_type:
+        cmd0.append(model_type)
             
-        # download the model using container
-        p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-        print(p0.stdout)               
-    else:
-        from download import get_repo
-        repo_url = spec["repo_url"]
-        get_repo(org, model_nm, repo_url)
+    # download the model using container
+    p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+    print(p0.stdout)
 
+    # download the model repository
+    if not org == "neuronets": # neuronet models do not need the repo download
+      repo_url = spec.get("repo_url")
+      get_repo(org, repo_url)
+                
     # create the command 
     data_path = Path(infile).parent
     out_path = Path(outfile).parent
-
+    
     # reading spec file in order to create options for model command
+    options_spec = spec.get("options", {})
+    
     model_options = []
-    for name, in_spec in inputs_spec.items():
-        argstr = in_spec.get("argstr", "")
-        value = eval(name)
-        if in_spec.get("is_flag"):
-            if value:
-                model_options.append(argstr)
-            continue
-        elif argstr:
-            model_options.append(argstr)
+    if eval(options) is not None:
+        val_l = eval(options)
+        val_dict = {}
+        for el in  val_l:
+            if "=" in el:
+                key, val = el.split("=")
+                val_dict[key] = val
+            else:
+                val_dict[el] = None
 
-        if in_spec.get("type") == "list":
-            model_options.extend([str(el) for el in value])
-        else:
-            model_options.append(str(value))
+        # updating command with the argument provided in the command line
+        for name, in_spec in options_spec.items():
+            if name in val_dict.keys():
+                argstr = in_spec.get("argstr", "")
+                value  = val_dict[name]
+                if in_spec.get("is_flag"):
+                    model_options.append(argstr)
+                    continue
+                elif argstr:
+                    model_options.append(argstr)
+
+                if in_spec.get("type") == "list":
+                    model_options.extend([str(el) for el in value])
+                else:
+                    model_options.append(str(value))
 
     # reading command from the spec file (allowing for f-string)
     try:
@@ -218,9 +175,9 @@ def predict(
         model_cmd = spec["command"]
 
     # TODO: this will work for singularity only
-    options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
+    cmd_options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
 
-    cmd = ["singularity","run"] + options + [image] + model_cmd.split() \
+    cmd = ["singularity","run"] + cmd_options + [image] + model_cmd.split() \
         + model_options
 
     # run command
@@ -341,7 +298,7 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
 
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
-
+        
     # updating specification with the argument provided in the command line
     for arg_str in ["n_classes"]:
         if eval(arg_str) is not None:

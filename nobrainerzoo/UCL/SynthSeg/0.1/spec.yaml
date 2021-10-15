@@ -1,15 +1,15 @@
 image:
-  singularity: UCL_image.sif
+  singularity: nobrainer-zoo_ucl.sif
   
 repo_url: "git@github.com:BBillot/SynthSeg.git"
 
-command: f"python UCL/org_repo/SynthSeg/scripts/commands/SynthSeg_predict.py {infile} {outfile}"
+command: f"python nobrainerzoo/UCL/SynthSeg/0.1/predict.py --i {infile} --o {outfile}"
 
-# TODO: it's not used to create the cli itself
-inputs:
-  post: {mandatury: False, type: "str"}
-  vol: {mandatury: False, argstr: "-r", type: "str"}
-  resample: {mandatory: False, type: "int"}
-  cpu: {mandatory: False, is_flag: true}
-  threads: {mandatory: False, type: "int"}
-  crop: {mandatory: False, argstr: "-v", is_flag: true}
+options: 
+  post: {mandatory: False, argstr: "--post", type: "str"}
+  resample: {mandatory: False, argstr: "--resample", type: "str"}
+  vol: {mandatury: False, argstr: "--vol", type: "str"}
+  crop: {mandatory: False, argstr: "--crop", type: "int", default: 192}
+  threads: {mandatory: False, argstr: "--threads", type: "int", default: 1}
+  cpu: {mandatory: False, argstr: "--cpu", is_flag: true}
+  
