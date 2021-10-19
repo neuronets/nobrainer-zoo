@@ -1,16 +1,16 @@
 # Nobrainer-zoo
-Nobrainer-zoo is a deep learning neuroimaging model-zoo toolbox that eases the use of trained deep learning models for varous application. Nobrainer zoo provides and enviroment with all the dependencies required for training or inference from models. The only software needed is `singularity` or `Docker`.
+Nobrainer-zoo is a toolbox with a collection of deep learning neuroimaging models that eases the use of pretrained models for various application. Nobrainer-zoo provides the required enviroment with all the dependencies for training/inference of models. The only software needed is `singularity` or `Docker`.
 
 To use the Nobrainer-zoo,
 
 ```
-clone https://github.com/neuronets/zoo.git
+git clone https://github.com/neuronets/zoo.git
 cd zoo
 pip install .
 
 ```
 
-Models should be refrenced based on their organization, and model name (`neuronets\brainy`). The trained models are version controled and one model might have different version. Therefore for inference, the model version also needs to be specified(`neuronets\brainy\0.1.0`). 
+Models should be refrenced based on their organization, and model name (`neuronets/brainy`). The trained models are version controled and one model might have different version. Therefore for inference, the model version also needs to be specified(`neuronets/brainy/0.1.0`). 
 Some models (`kwyk` and `braingen`) also have various types which means there was different structural chracteristic during training that leads to different trained models. Run help to see the functions and each function's options.
 
 ```
@@ -21,7 +21,8 @@ nobrainer-zoo train --help
 
 # Available models
 
-- [brainy](https://github.com/neuronets/brainy): 3D U-Net brain extraction model (available for train and inference)
+- [brainy](https://github.com/neuronets/brainy): 3D U-Net brain extraction model (available for training and inference)
+- [ams](https://github.com/neuronets/ams): 3D U-Net meningioma segmentation model (available for training and inference)
 - [SynthSeg](https://github.com/BBillot/SynthSeg): Contrast and resolution 3D brain segmentation model (available for inference)
 
 # Inference Example
@@ -44,7 +45,7 @@ nobrainer-zoo predict -m UCL/SynthSeg/0.1 <path_to_input> <path_to_save_output> 
 
 # Train Example
 
-For training with sample dataset you do not need to pass any dataset pattern
+For training with sample dataset you do not need to pass any dataset pattern.
 
 ```
 nobrainer-zoo train -m neuronets/brainy
@@ -56,7 +57,7 @@ To train the network with your own data pass the dataset pattern in the form of 
 nobrainer-zoo train -m neuronets/brainy "<data_train_pattern>" "<data_evaluate_pattern>"
 ```
 
-Other parameters are also can be changed by providing a spec file or changing them with cli command.
+Other parameters can be changed by providing a spec file or changing them with cli command.
 
 ```
 nobrainer-zoo train -m neuronets/brainy --spec_file <path_to_spec_file>
