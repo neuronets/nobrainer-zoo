@@ -25,6 +25,9 @@ nobrainer-zoo train --help
 - [ams](https://github.com/neuronets/ams): 3D U-Net meningioma segmentation model (available for training and inference)
 - [SynthSeg](https://github.com/BBillot/SynthSeg): Contrast and resolution 3D brain segmentation model (available for inference)
 
+
+You can suggest a model [here]().
+
 # Inference Example
 
 Inference with default options,
