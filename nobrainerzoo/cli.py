@@ -102,7 +102,6 @@ def predict(
 
     """
     
-    # TODO download the image if it is not already downloded
     # set the docker/singularity image
     org, model_nm, ver = model.split("/")
     
@@ -137,8 +136,8 @@ def predict(
         # check output option
         cmd0 = ["docker", "run","-v",path,"--rm","neuronets/nobrainer-zoo:nobrainer", 
                 "python3", file, model]
-        else:
-            raise ValueError(f"unknown container type: {container_type}")
+    else:
+        raise ValueError(f"unknown container type: {container_type}")
     if model_type:
             cmd0.append(model_type)
             
@@ -209,9 +208,9 @@ def predict(
         cmd_options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
         cmd = ["docker", "run"] + cmd_options + [image] + model_cmd.split() \
             + model_options
-        else:
-            raise ValueError(f"unknown container type: {container_type}")
-    # TODO: this will work for singularity only
+    else:
+        raise ValueError(f"unknown container type: {container_type}")
+    
     #cmd_options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
 
     # cmd = ["singularity","run"] + cmd_options + [image] + model_cmd.split() \
