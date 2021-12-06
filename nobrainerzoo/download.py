@@ -2,15 +2,15 @@ import os
 import datalad.api
 from utils import get_model_path
 
-def get_nobrainer_model(model_path):
+def get_model(model_path):
     """
-    downloads the nobrainer model located in model_path.
+    downloads the model located in model_path.
     
     """ 
     
     # if trained model is not already cloned
     if not os.path.exists("nobrainerzoo/trained-models"):
-        url="git@github.com:neuronets/trained-models.git"
+        url="https://github.com/neuronets/trained-models.git"
         datalad.api.clone(source=url, path="nobrainerzoo/trained-models")
         
     if not os.path.exists(model_path):
@@ -29,6 +29,6 @@ if __name__ == '__main__':
         model_type = str(sys.argv[2])
         path = get_model_path(model_name, model_type)
     
-    get_nobrainer_model(path)
+    get_model(path)
 
 

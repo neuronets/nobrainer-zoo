@@ -1,6 +1,8 @@
+#### container info
 image:
-  singularity: nobrainer-zoo_test.sif
-  
+  singularity: nobrainer-zoo_nobrainer.sif
+  docker: neuronets/nobrainer-zoo:nobrainer
+#### repository info  
 repo_url: "git@github.com:neuronets/nobrainer.git"
 
 command: f"nobrainer predict -m {model_path} {infile} {outfile}"

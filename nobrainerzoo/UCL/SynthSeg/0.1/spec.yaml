@@ -1,6 +1,8 @@
+#### container info
 image:
   singularity: nobrainer-zoo_ucl.sif
-  
+  docker: neuronets/nobrainer-zoo:ucl
+#### repository info  
 repo_url: "git@github.com:BBillot/SynthSeg.git"
 
 command: f"python nobrainerzoo/UCL/SynthSeg/0.1/predict.py --i {infile} --o {outfile}"

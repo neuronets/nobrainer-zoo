@@ -110,20 +110,37 @@ def predict(
     spec_file = model_dir / "spec.yaml"
     
     if not model_dir.exists():
-        raise Exception("model directory not found")
+        raise Exception("model directory not found!",
+                        "This model does not exist in the zoo or didn't properly added.")
     if not spec_file.exists():
-        raise Exception("spec file doesn't exist")
+        raise Exception("spec file doesn't exist!",
+                        "This model does not exist in the zoo or didn't properly added.")
   
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
 
-    image = _container_check(container_type=container_type, image_spec=spec.get("image"),
-                              docker_ok=False)
+    image = _container_check(container_type=container_type, image_spec=spec.get("image"))
     
-    download_image = Path(__file__).resolve().parents[0] / "env/nobrainer-zoo_test.sif"
-    cmd0 = ["singularity", "run", download_image, "python3", "nobrainerzoo/download.py", model]
+    if container_type == "singularity":
+        
+        download_image = Path(__file__).resolve().parents[0] / "env/nobrainer-zoo_nobrainer.sif.sif"
+        if not download_image.exists():
+            dwnld_cmd = ["singularity", "pull", "--dir", 
+                       str(Path(__file__).resolve().parents[0]/ "env"),
+                       "docker://neuronets/nobrainer-zoo:nobrainer"]
+            p = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+            print(p.stdout)
+        cmd0 = ["singularity", "run", download_image, "python3", "nobrainerzoo/download.py", model]
+    elif container_type == "docker":
+        path = str(Path(__file__).resolve())+":"+str(Path(__file__).resolve())
+        file = str(Path(__file__).resolve() / "download.py")
+        # check output option
+        cmd0 = ["docker", "run","-v",path,"--rm","neuronets/nobrainer-zoo:nobrainer", 
+                "python3", file, model]
+        else:
+            raise ValueError(f"unknown container type: {container_type}")
     if model_type:
-        cmd0.append(model_type)
+            cmd0.append(model_type)
             
     # download the model using container
     p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
@@ -134,9 +151,10 @@ def predict(
       repo_url = spec.get("repo_url")
       get_repo(org, repo_url)
                 
-    # create the command 
-    data_path = Path(infile).parent
-    out_path = Path(outfile).parent
+    
+    data_path = Path(infile).resolve().parent
+    out_path = Path(outfile).resolve().parent
+    bind_paths = [str(data_path), str(out_path)]
     
     # reading spec file in order to create options for model command
     options_spec = spec.get("options", {})
@@ -178,12 +196,26 @@ def predict(
         model_cmd = eval(spec["command"])
     except NameError:
         model_cmd = spec["command"]
-
+        
+    if container_type == "singularity":
+        bind_paths = ",".join(bind_paths)
+        cmd_options = ["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
+        cmd = ["singularity", "run"] + cmd_options + [image] + model_cmd.split() \
+            + model_options
+    elif container_type == "docker":
+        bind_paths_docker = []
+        for el in bind_paths:
+            bind_paths_docker += ["-v", f"{el}:{el}"]
+        cmd_options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
+        cmd = ["docker", "run"] + cmd_options + [image] + model_cmd.split() \
+            + model_options
+        else:
+            raise ValueError(f"unknown container type: {container_type}")
     # TODO: this will work for singularity only
-    cmd_options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
+    #cmd_options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
 
-    cmd = ["singularity","run"] + cmd_options + [image] + model_cmd.split() \
-        + model_options
+    # cmd = ["singularity","run"] + cmd_options + [image] + model_cmd.split() \
+    #     + model_options
 
     # run command
     p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
@@ -286,7 +318,7 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
     Saves the model weights, checkpoints and training history to the path defined by user.
     
     """
-    # TODO download the image if it is not already downloded
+    
     # set the docker/singularity image
     org, model_nm = model.split("/")
     model_dir = Path(__file__).resolve().parents[0] / model
@@ -360,7 +392,6 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
         options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
         cmd_cont = ["docker", "run"] + options + [image] + cmd
 
-
     # run command
     print("training the model ........")
     p1 = sp.run(cmd_cont, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
@@ -374,7 +405,7 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
 def _container_check(container_type, image_spec, docker_ok=True):
     if image_spec is None:
         raise Exception("image not provided in the specification")
-
+        
     if container_type == "singularity":
         if shutil.which("singularity") is None:
             raise Exception("singularity is not installed")
@@ -382,8 +413,15 @@ def _container_check(container_type, image_spec, docker_ok=True):
             image = image_spec[container_type]
             image = Path(__file__).resolve().parents[0] / f"env/{image}"
             if not image.exists():
-                # TODO: we should catch the error and try to download the image
-                raise FileNotFoundError(f"the {image} can't be found")
+                # pull image from dockerhub
+                print("Container does not exists locally!")
+                print("Downloading the container file. it might take a while...")
+                pull_image = "docker://"+image_spec["docker"]
+                path = Path(__file__).resolve().parents[0] / "env/"
+                pull_cmd = ["singularity","pull","--dir", path, pull_image]
+                pr = sp.run(pull_cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+                print(pr.stdout)
+                
         else:
             raise Exception(f"container name for {container_type} is not "
                             f"provided in the specification, "
