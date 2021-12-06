@@ -26,7 +26,7 @@ nobrainer-zoo train --help
 - [SynthSeg](https://github.com/BBillot/SynthSeg): Contrast and resolution 3D brain segmentation model (available for inference)
 
 
-List of models which will be added in near future can be find [here](). You can suggest a model [here]().
+List of models which will be added in near future can be find [here](https://github.com/Hoda1394/zoo/blob/add/inference_scripts/models_to_add.md). You can suggest a model [here]().
 
 *<font size="1">Note: For models, their original license is applied.</font>*
 
