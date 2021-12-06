@@ -6,7 +6,7 @@ To use the Nobrainer-zoo,
 ```
 git clone https://github.com/neuronets/zoo.git
 cd zoo
-pip install .
+pip install -e .
 
 ```
 
