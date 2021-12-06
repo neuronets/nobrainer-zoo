@@ -209,7 +209,8 @@ def predict(
         cmd_options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
         cmd = ["docker", "run"] + cmd_options + [image] + model_cmd.split() \
             + model_options
-
+        else:
+            raise ValueError(f"unknown container type: {container_type}")
     # TODO: this will work for singularity only
     #cmd_options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
 
