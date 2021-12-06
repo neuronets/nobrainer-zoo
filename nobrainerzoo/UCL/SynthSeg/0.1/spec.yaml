@@ -1,7 +1,7 @@
 #### container info
 image:
   singularity: nobrainer-zoo_ucl.sif
-  docker: hodadock/nobrainer-zoo:ucl
+  docker: neuronets/nobrainer-zoo:ucl
 #### repository info  
 repo_url: "git@github.com:BBillot/SynthSeg.git"
 

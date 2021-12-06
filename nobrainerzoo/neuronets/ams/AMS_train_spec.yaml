@@ -1,7 +1,7 @@
 #### container info
 image:
-  singularity: nobrainer-zoo_test.sif
-  docker: hodadock/nobrainer-zoo:test # to be checked
+  singularity: nobrainer-zoo_nobrainer.sif
+  docker: neuronets/nobrainer-zoo:nobrainer # to be checked
   
 #### Train script
 train_script: AMS_Train_Unet.py

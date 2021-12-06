@@ -1,7 +1,7 @@
 #### container info
 image:
-  singularity: nobrainer-zoo_test.sif
-  docker: hodadock/nobrainer-zoo:test
+  singularity: nobrainer-zoo_nobrainer.sif
+  docker: neuronets/nobrainer-zoo:nobrainer
 #### repository info  
 repo_url: "git@github.com:neuronets/nobrainer.git"
 

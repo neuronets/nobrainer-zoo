@@ -123,11 +123,11 @@ def predict(
     
     if container_type == "singularity":
         
-        download_image = Path(__file__).resolve().parents[0] / "env/nobrainer-zoo_test.sif"
+        download_image = Path(__file__).resolve().parents[0] / "env/nobrainer-zoo_nobrainer.sif.sif"
         if not download_image.exists():
             dwnld_cmd = ["singularity", "pull", "--dir", 
                        str(Path(__file__).resolve().parents[0]/ "env"),
-                       "docker://hodadock/nobrainer-zoo:test"]
+                       "docker://neuronets/nobrainer-zoo:nobrainer"]
             p = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
             print(p.stdout)
         cmd0 = ["singularity", "run", download_image, "python3", "nobrainerzoo/download.py", model]
@@ -135,7 +135,7 @@ def predict(
         path = str(Path(__file__).resolve())+":"+str(Path(__file__).resolve())
         file = str(Path(__file__).resolve() / "download.py")
         # check output option
-        cmd0 = ["docker", "run","-v",path,"--rm","hodadock/nobrainer-zoo:test", 
+        cmd0 = ["docker", "run","-v",path,"--rm","neuronets/nobrainer-zoo:nobrainer", 
                 "python3", file, model]
         
     if model_type:
