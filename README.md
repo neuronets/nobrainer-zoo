@@ -28,7 +28,7 @@ nobrainer-zoo train --help
 
 List of models which will be added in near future can be find [here](https://github.com/Hoda1394/zoo/blob/add/inference_scripts/models_to_add.md). You can suggest a model [here]().
 
-*<font size="1">Note: For models, their original license is applied.</font>*
+*<font size="1">Note: models are distributed under their original license.</font>*
 
 # Inference Example
 
