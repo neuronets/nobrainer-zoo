@@ -137,7 +137,8 @@ def predict(
         # check output option
         cmd0 = ["docker", "run","-v",path,"--rm","neuronets/nobrainer-zoo:nobrainer", 
                 "python3", file, model]
-        
+        else:
+            raise ValueError(f"unknown container type: {container_type}")
     if model_type:
             cmd0.append(model_type)
             
