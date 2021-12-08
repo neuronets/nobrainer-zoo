@@ -150,8 +150,8 @@ def predict(
 
     # download the model repository
     if not org == "neuronets": # neuronet models do not need the repo download
-      repo_url = spec.get("repo_url")
-      get_repo(org, repo_url)
+      repo_info = spec.get("repo")
+      get_repo(org, repo_info["repo_url"], repo_info["commitish"])
                 
     
     data_path = Path(infile).resolve().parent
@@ -198,7 +198,7 @@ def predict(
         model_cmd = eval(spec["command"])
     except NameError:
         model_cmd = spec["command"]
-        
+       
     if container_type == "singularity":
         bind_paths = ",".join(bind_paths)
         cmd_options = ["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
