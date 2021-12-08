@@ -9,12 +9,14 @@ print('\n')
 # python imports
 import os
 import sys
+from pathlib import Path
 from argparse import ArgumentParser
 
 # add the repository main folder to python path and import ./SynthSeg/predict.py
 org_home = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0]))))
 model_repo = os.path.join(org_home,"org_repo")
 sys.path.append(model_repo)
+model_path = Path(__file__).resolve().parents[3] / "trained-models/UCL/SynthSeg/0.1/SynthSeg.h5"
 from SynthSeg.predict import predict
 
 
@@ -60,6 +62,7 @@ args['n_neutral_labels'] = 18
 args['segmentation_label_names'] = os.path.join(model_repo, 'data/labels_classes_priors/segmentation_names.npy')
 args['topology_classes'] = os.path.join(model_repo, 'data/labels_classes_priors/topological_classes.npy')
 args['path_model'] = os.path.join(model_repo, 'models/SynthSeg.h5')
+#args['path_model'] = str(model_path)
 args['padding'] = args['cropping']
 
 # call predict

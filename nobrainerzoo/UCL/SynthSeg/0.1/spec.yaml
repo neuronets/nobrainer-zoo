@@ -2,8 +2,10 @@
 image:
   singularity: nobrainer-zoo_ucl.sif
   docker: neuronets/nobrainer-zoo:ucl
-#### repository info  
-repo_url: "git@github.com:BBillot/SynthSeg.git"
+#### repository info
+repo:  
+    repo_url: "https://github.com/BBillot/SynthSeg.git"
+    commitish: "1c9995e0"
 
 command: f"python nobrainerzoo/UCL/SynthSeg/0.1/predict.py --i {infile} --o {outfile}"
 # TODO: we should add help for options.
