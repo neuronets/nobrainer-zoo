@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import subprocess as sp
 
@@ -34,14 +33,15 @@ def get_model_path(model_name, model_type=None):
         raise Exception("Model type should be one of {} but it is {}".format(
           models[model_name], model_type))
         
-    root_path = "nobrainerzoo/trained-models/"
+    root_path = Path(__file__).resolve().parent / "trained-models"
     
     if model_name in ["neuronets/braingen/0.1.0", "neuronets/kwyk/0.4.1"]:
-        model_file = os.path.join(models[model_name],model_type)
+        raise Exception("This model has not added yet.")
+        #model_file = os.path.join(models[model_name],model_type)
     else:
         model_file = models[model_name]
     # create the model path     
-    model_path = os.path.join(root_path,model_name,model_file)
+    model_path = root_path / model_name / model_file
     return model_path
 
 def load_model(path):

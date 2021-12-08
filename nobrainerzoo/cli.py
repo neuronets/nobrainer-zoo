@@ -102,10 +102,9 @@ def predict(
 
     """
     
-    # set the docker/singularity image
     org, model_nm, ver = model.split("/")
-    
-    model_dir = Path(__file__).resolve().parents[0] / model
+    parent_dir = Path(__file__).resolve().parent
+    model_dir = parent_dir / model
     spec_file = model_dir / "spec.yaml"
     
     if not model_dir.exists():
@@ -117,25 +116,29 @@ def predict(
   
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
-
+        
+    # set the docker/singularity image    
     image = _container_check(container_type=container_type, image_spec=spec.get("image"))
     
     if container_type == "singularity":
         
-        download_image = Path(__file__).resolve().parents[0] / "env/nobrainer-zoo_nobrainer.sif.sif"
+        download_image = parent_dir / "env/nobrainer-zoo_nobrainer.sif"
         if not download_image.exists():
             dwnld_cmd = ["singularity", "pull", "--dir", 
-                       str(Path(__file__).resolve().parents[0]/ "env"),
+                       str(parent_dir/ "env"),
                        "docker://neuronets/nobrainer-zoo:nobrainer"]
             p = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
             print(p.stdout)
-        cmd0 = ["singularity", "run", download_image, "python3", "nobrainerzoo/download.py", model]
+        cmd0 = ["singularity", "run", download_image, "python3", 
+                str(parent_dir/ "download.py"), model]
+        
     elif container_type == "docker":
-        path = str(Path(__file__).resolve())+":"+str(Path(__file__).resolve())
-        file = str(Path(__file__).resolve() / "download.py")
+        path = str(parent_dir)+":"+str(parent_dir)
+        loader = str(parent_dir / "download.py")
         # check output option
-        cmd0 = ["docker", "run","-v",path,"--rm","neuronets/nobrainer-zoo:nobrainer", 
-                "python3", file, model]
+        cmd0 = ["docker", "run","-v",path,"-v",f"{parent_dir}:/output","-w","/output",
+                "--rm","neuronets/nobrainer-zoo:nobrainer", 
+                "python3", loader, model]
     else:
         raise ValueError(f"unknown container type: {container_type}")
     if model_type:
@@ -211,11 +214,6 @@ def predict(
     else:
         raise ValueError(f"unknown container type: {container_type}")
     
-    #cmd_options =["--nv", "-B", str(data_path), "-B", f"{out_path}:/output", "-W", "/output"]
-
-    # cmd = ["singularity","run"] + cmd_options + [image] + model_cmd.split() \
-    #     + model_options
-
     # run command
     p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
     print(p1.stdout)
