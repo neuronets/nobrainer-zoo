@@ -1,5 +1,6 @@
 from pathlib import Path
 import subprocess as sp
+import json
 
 def get_model_path(model_name, model_type=None):
     """
@@ -10,39 +11,21 @@ def get_model_path(model_name, model_type=None):
 
     Returns
     -------
-    model_path
+    model_path: path to pretrained model file in trained_models repository
     
     """
-    # TO DO: model database can be a json file and be updated separately
-    models = {"neuronets/ams/0.1.0": "meningioma_T1wc_128iso_v1.h5",
-              "neuronets/braingen/0.1.0": ["generator_res_8",
-                                 "generator_res_16",
-                                 "generator_res_32",
-                                 "generator_res_64",
-                                 "generator_res_128",
-                                 "generator_res_256"],
-              "neuronets/brainy/0.1.0": "brain-extraction-unet-128iso-model.h5",
-              "neuronets/kwyk/0.4.1": ["all_50_wn",
-                                      "all_50_bwn_09_multi",
-                                      "all_50_bvwn_multi_prior"],
-              "UCL/SynthSeg/0.1": "SynthSeg.h5"
-              }
+    with open("model_database.json", "r") as fp:
+        models=json.load(fp)
     
-    # model type should be given for braingen and kwyk
-    if model_name in ["braingen","kwyk"] and model_type not in models[model_name]:
-        raise Exception("Model type should be one of {} but it is {}".format(
-          models[model_name], model_type))
+    org,mdl,ver = model_name.split("/")
         
     root_path = Path(__file__).resolve().parent / "trained-models"
     
-    if model_name in ["neuronets/braingen/0.1.0", "neuronets/kwyk/0.4.1"]:
-        raise Exception("This model has not added yet.")
-        #model_file = os.path.join(models[model_name],model_type)
+    if not model_type:
+        return root_path / model_name / models[model_name]
     else:
-        model_file = models[model_name]
-    # create the model path     
-    model_path = root_path / model_name / model_file
-    return model_path
+        return root_path / model_name / models[model_name][model_type]
+    
 
 def load_model(path):
     """ Returns the model object from file path"""
@@ -72,3 +55,4 @@ def get_repo(org, repo_url, repo_state):
         print(f"{org} repository is downloaded")
     else:
         print(f"{org} repository is available locally")
+        
