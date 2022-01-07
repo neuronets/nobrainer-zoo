@@ -8,4 +8,6 @@ tmp_codes/*
 ams_inference.py
 bayesian_inference_general.py
 brainy_inference.py
+nobrainerzoo/*/*/org_repo/
+nobrainerzoo/*/org_repo/
 

@@ -104,7 +104,14 @@ def predict(
     
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
-    model_dir = parent_dir / model
+    
+    # check model type
+    _check_model_type(model, model_type)
+    
+    if model_type:
+        model_dir = parent_dir / model / model_type
+    else:
+        model_dir = parent_dir / model
     spec_file = model_dir / "spec.yaml"
     
     if not model_dir.exists():
@@ -113,7 +120,7 @@ def predict(
     if not spec_file.exists():
         raise Exception("spec file doesn't exist!",
                         "This model does not exist in the zoo or didn't properly added.")
-  
+       
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
         
@@ -141,6 +148,7 @@ def predict(
                 "python3", loader, model]
     else:
         raise ValueError(f"unknown container type: {container_type}")
+        
     if model_type:
             cmd0.append(model_type)
             
@@ -151,6 +159,9 @@ def predict(
     # download the model repository
     if not org == "neuronets": # neuronet models do not need the repo download
       repo_info = spec.get("repo")
+      # UCL organization has separate repositories for different models
+      if org == "UCL":  
+          org = org + "/" + model_nm
       get_repo(org, repo_info["repo_url"], repo_info["commitish"])
                 
     
@@ -442,6 +453,23 @@ def _container_check(container_type, image_spec, docker_ok=True):
 
     return image
 
+def _check_model_type(model_name, model_type=None):
+    import json
+    # load model database
+    ds_path = Path(__file__).resolve().parent / "model_database.json"
+    with open(ds_path, "r") as fp:
+        models=json.load(fp)
+        
+    org,mdl,ver = model_name.split("/")
+    
+    models_w_types = [m.split("/")[1] for m,v in models.items() if isinstance(v,dict)]
+    
+    # check if model_types is given and correct
+    if mdl in models_w_types and model_type not in models[model_name].keys():
+        raise Exception("Model type should be one of {} but it is {}".format(
+          list(models[model_name].keys()), model_type))
+    elif mdl not in models_w_types and model_type != None:
+        raise Exception(f"{model_name} does not have model type")
 
 # for debugging purposes    
 if __name__ == "__main__":
