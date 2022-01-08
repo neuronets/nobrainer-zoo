@@ -1,3 +1,4 @@
+# This code is adapted from SynthSeg_predict.py to be compatible for Nobrainer-zoo
 """This script enables to launch predictions with SynthSeg from the terminal."""
 
 # print information
@@ -8,14 +9,15 @@ print('\n')
 # python imports
 import os
 import sys
+from pathlib import Path
 from argparse import ArgumentParser
 
 # add the repository main folder to python path and import ./SynthSeg/predict.py
-org_home = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0]))))
-model_repo = os.path.join(org_home,"org_repo")
-sys.path.append(model_repo)
+org_home = Path(__file__).resolve().parents[1]
+model_repo = org_home / "org_repo"
+sys.path.append(str(model_repo))
+model_path = Path(__file__).resolve().parents[3] / "trained-models/UCL/SynthSeg/0.1/SynthSeg.h5"
 from SynthSeg.predict import predict
-
 
 # parse arguments
 parser = ArgumentParser()
@@ -33,7 +35,7 @@ parser.add_argument("--vol", type=str, default=None, dest="path_volumes",
                     help="(optional) Output CSV file with volumes for all structures and subjects.")
 
 # parameters
-parser.add_argument("--crop", type=int, default=None, dest="cropping",
+parser.add_argument("--crop", nargs='+', type=int, default=192, dest="cropping",
                     help="(optional) Size of 3D patches to analyse. Default is 192.")
 parser.add_argument("--threads", type=int, default=1, dest="threads",
                     help="(optional) Number of cores to be used. Default is 1.")
@@ -54,14 +56,13 @@ tf.config.threading.set_intra_op_parallelism_threads(args['threads'])
 del args['threads']
 
 # default parameters
-path_label_list = os.path.join(model_repo, 'data/labels_classes_priors/segmentation_labels.npy')
-path_names_list = os.path.join(model_repo, 'data/labels_classes_priors/segmentation_names.npy')
-path_topology_classes = os.path.join(model_repo, 'data/labels_classes_priors/topological_classes.npy')
-path_model = os.path.join(model_repo, 'models/SynthSeg.h5')
-args['segmentation_label_list'] = path_label_list
-args['segmentation_names_list'] = path_names_list
-args['topology_classes'] = path_topology_classes
-args['path_model'] = path_model
+args['segmentation_labels'] = os.path.join(model_repo, 'data/labels_classes_priors/segmentation_labels.npy')
+args['n_neutral_labels'] = 18
+args['segmentation_label_names'] = os.path.join(model_repo, 'data/labels_classes_priors/segmentation_names.npy')
+args['topology_classes'] = os.path.join(model_repo, 'data/labels_classes_priors/topological_classes.npy')
+args['path_model'] = os.path.join(model_repo, 'models/SynthSeg.h5')
+#args['path_model'] = str(model_path)
+args['padding'] = args['cropping']
 
 # call predict
 predict(**args)
