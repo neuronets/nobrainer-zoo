@@ -55,8 +55,8 @@ def cli():
     return
 
 @cli.command()
-@click.argument("infile")
-@click.argument("outfile")
+@click.argument("infile", nargs=-1)
+@click.argument("outfile", nargs=1)
 @click.option(
     "-m",
     "--model",
@@ -104,7 +104,7 @@ def predict(
     
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
-    
+
     # check model type
     _check_model_type(model, model_type)
     
@@ -164,10 +164,10 @@ def predict(
           org = org + "/" + model_nm
       get_repo(org, repo_info["repo_url"], repo_info["commitish"])
                 
-    
-    data_path = Path(infile).resolve().parent
+    # check the input data
+    data_path = _check_input(infile, spec)
     out_path = Path(outfile).resolve().parent
-    bind_paths = [str(data_path), str(out_path)]
+    bind_paths = data_path + [str(out_path)]
     
     # reading spec file in order to create options for model command
     options_spec = spec.get("options", {})
@@ -203,7 +203,7 @@ def predict(
                     model_options.extend([str(el) for el in eval(value)])
                 else:
                     model_options.append(str(value))
-
+                   
     # reading command from the spec file (allowing for f-string)
     try:
         model_cmd = eval(spec["command"])
@@ -470,7 +470,16 @@ def _check_model_type(model_name, model_type=None):
           list(models[model_name].keys()), model_type))
     elif mdl not in models_w_types and model_type != None:
         raise Exception(f"{model_name} does not have model type")
-
+        
+def _check_input(infile, spec):
+    n_inputs = spec["data_spec"]["input"]["n_files"]
+    if len(infile) != n_inputs:
+        raise Exception(f"This model needs {n_inputs} input files but {len(infile)} files are given.")
+    else:
+        data_path  = [str(Path(file).resolve().parent) for file in infile]
+        
+    return data_path
+        
 # for debugging purposes    
 if __name__ == "__main__":
     cli()

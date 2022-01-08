@@ -14,7 +14,8 @@ def get_model_path(model_name, model_type=None):
     model_path: path to pretrained model file in trained_models repository
     
     """
-    with open("model_database.json", "r") as fp:
+    database_path = Path(__file__).resolve().parent / "model_database.json"
+    with open(database_path, "r") as fp:
         models=json.load(fp)
     
     org,mdl,ver = model_name.split("/")
@@ -49,7 +50,7 @@ def get_repo(org, repo_url, repo_state):
         p0 = sp.run(["git", "clone", repo_url, str(repo_path)], stdout=sp.PIPE,
                     stderr=sp.STDOUT ,text=True)
         print(p0.stdout)
-        p1 = sp.run(["git", "checkout", repo_state], stdout=sp.PIPE,
+        p1 = sp.run(["git","-C",str(repo_path),"checkout", repo_state], stdout=sp.PIPE,
                     stderr=sp.STDOUT ,text=True)
         print(p1.stdout)
         print(f"{org} repository is downloaded")

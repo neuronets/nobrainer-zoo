@@ -5,7 +5,7 @@ image:
 #### repository info  
 repo_url: "git@github.com:neuronets/nobrainer.git"
 
-command: f"nobrainer predict -m {model_path} {infile} {outfile}"
+command: f"nobrainer predict -m {model_path} {infile[0]} {outfile}"
 # TODO: we should add help for model options
 options:
   block_shape: {mandatory: False, default: [128, 128, 128], argstr: "-b", type: "list"}
@@ -14,3 +14,7 @@ options:
   rotate_and_predict: {argstr: "--rotate-and-predict", is_flag: true}
   largest_label: {arstr: "-l", is_flag: true}
   verbose: {argstr: "-v", is_flag: true}
+#### input data characteristics
+data_spec:
+  input: {n_files: 1}
+  output: {n_files: 1}
