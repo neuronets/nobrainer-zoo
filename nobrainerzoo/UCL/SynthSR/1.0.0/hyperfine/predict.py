@@ -32,7 +32,7 @@ from argparse import ArgumentParser
 org_home = Path(__file__).resolve().parents[2]
 model_repo = org_home / "org_repo"
 print(str(model_repo))
-sys.path.append(model_repo)
+sys.path.append(str(model_repo))
 model_path = Path(__file__).resolve().parents[4] / "trained-models/UCL/SynthSR/1.0.0/hyperfine/SynthSR_v10_210712_hyperfine.h5"
 from ext.neuron import models as nrn_models
 from ext.lab2im import utils

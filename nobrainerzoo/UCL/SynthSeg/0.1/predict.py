@@ -13,12 +13,11 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 # add the repository main folder to python path and import ./SynthSeg/predict.py
-org_home = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0]))))
-model_repo = os.path.join(org_home,"org_repo")
-sys.path.append(model_repo)
+org_home = Path(__file__).resolve().parents[1]
+model_repo = org_home / "org_repo"
+sys.path.append(str(model_repo))
 model_path = Path(__file__).resolve().parents[3] / "trained-models/UCL/SynthSeg/0.1/SynthSeg.h5"
 from SynthSeg.predict import predict
-
 
 # parse arguments
 parser = ArgumentParser()

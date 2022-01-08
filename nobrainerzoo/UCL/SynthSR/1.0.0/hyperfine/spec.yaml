@@ -6,12 +6,21 @@ image:
 repo:  
     repo_url: "https://github.com/BBillot/SynthSR.git"
     commitish: "59b92b54"
-
-command: f"python nobrainerzoo/UCL/SynthSR/1.0.0/hyperfine/predict.py {infile1} {infile2} {outfile}"
+#### command to run
+command: f"python nobrainerzoo/UCL/SynthSR/1.0.0/hyperfine/predict.py {infile[0]} {infile[1]} {outfile}"
 # TODO: we should add help for options.
 options:
   threads: {mandatory: False, argstr: "--threads", type: "int", default: 1}
-  cpu: {mandatory: False, argstr: "--cpu", is_flag: true}   
+  cpu: {mandatory: False, argstr: "--cpu", is_flag: true}
+#### input data characteristics
+data_spec:
+  input: {n_files: 2}
+  output: {n_files: 1}
+
+
+
+    
+     
   
   
   
