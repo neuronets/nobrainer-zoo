@@ -10,9 +10,9 @@
     },
     "neuronets/brainy/0.1.0": "brain-extraction-unet-128iso-model.h5",
     "neuronets/kwyk/0.4.1": {
-        "wn": "all_50_wn",
-        "bwn": "all_50_bwn_09_multi",
-        "bvwn": "all_50_bvwn_multi_prior"
+        "bwn": "all_50_wn",
+        "bwn_multi": "all_50_bwn_09_multi",
+        "bvwn_multi_prior": "all_50_bvwn_multi_prior"
     },
     "UCL/SynthSeg/0.1": "SynthSeg.h5",
     "UCL/SynthSR/1.0.0": {

@@ -104,7 +104,7 @@ def predict(
     
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
-
+    
     # check model type
     _check_model_type(model, model_type)
     
@@ -163,7 +163,7 @@ def predict(
       if org == "UCL":  
           org = org + "/" + model_nm
       get_repo(org, repo_info["repo_url"], repo_info["commitish"])
-                
+               
     # check the input data
     data_path = _check_input(infile, spec)
     out_path = Path(outfile).resolve().parent
@@ -203,7 +203,7 @@ def predict(
                     model_options.extend([str(el) for el in eval(value)])
                 else:
                     model_options.append(str(value))
-                   
+                  
     # reading command from the spec file (allowing for f-string)
     try:
         model_cmd = eval(spec["command"])
@@ -472,8 +472,10 @@ def _check_model_type(model_name, model_type=None):
         raise Exception(f"{model_name} does not have model type")
         
 def _check_input(infile, spec):
+    """Checks the infile path and returns the binding path for the container"""
+    # TODO: check if the infile is a dir 
     n_inputs = spec["data_spec"]["input"]["n_files"]
-    if len(infile) != n_inputs:
+    if not n_inputs == "any" and len(infile) != n_inputs:
         raise Exception(f"This model needs {n_inputs} input files but {len(infile)} files are given.")
     else:
         data_path  = [str(Path(file).resolve().parent) for file in infile]
