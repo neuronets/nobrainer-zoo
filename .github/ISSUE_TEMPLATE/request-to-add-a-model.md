@@ -11,10 +11,10 @@ assignees: dhritimandas, Hoda1394, Aakanksha-Rana
 Name of the model you are suggesting to be added?
 
 **Model's URL**
-Please add the Github page or the paper link
+Please add the Github page or the paper link for the model.
 
 **Why do you think this model should be added?**
-Please describe your reason and points, such as applications to neuroimaging.
+Please describe your reason and points such as applications to neuroimaging.
 
 **Do you like to help us to add this model?**
-Please let us know if you need to contribute to adding it.
+Please let us know if you like to contribute to adding it.
