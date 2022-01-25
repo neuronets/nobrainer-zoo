@@ -6,7 +6,7 @@ item = torch.load('item.pt')
 
 # instantiate the pretrained model
 image = item[0][None]
-model = punet.unet2d_320_dktatlas_positional_20()
+model = punet.unet2d_320_dktatlas_positional_20_1_0_0()
 
 # inference
 output = model(image)[0].argmax(0)

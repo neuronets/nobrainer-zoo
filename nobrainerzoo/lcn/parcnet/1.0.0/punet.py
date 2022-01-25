@@ -224,8 +224,8 @@ def unet2d_128(in_channels, out_channels, global_skip=False, pretrained=False, *
 def unet2d_320(in_channels, out_channels, global_skip=False, pretrained=False, **kwargs):
     return UNet2d(in_channels, out_channels, block_config=(24,48,96,192,384), convs_per_block=2, global_skip=global_skip, **kwargs)
 
-def unet2d_320_dktatlas_positional_20(in_channels=3, out_channels=32, padding=32, **kwargs):
-    loadpath = 'dktatlas_identity_0.000_0.000_unet2d_320_0.050_60_pos_20.ckpt'
+def unet2d_320_dktatlas_positional_20_1_0_0(in_channels=3, out_channels=32, padding=32, **kwargs):
+    loadpath = 'dktatlas_identity_0.000_0.000_unet2d_320_0.050_60_pos_20_1.0.0.ckpt'
     model = unet2d_320(in_channels, out_channels, padding=padding, positional=20, load_path=loadpath, **kwargs)
 
     for param in model.parameters():
