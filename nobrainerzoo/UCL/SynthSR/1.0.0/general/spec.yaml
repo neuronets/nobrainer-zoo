@@ -1,0 +1,21 @@
+#### container info
+image:
+  singularity: nobrainer-zoo_ucl.sif
+  docker: neuronets/nobrainer-zoo:ucl
+#### repository info
+repo:  
+    repo_url: "https://github.com/BBillot/SynthSR.git"
+    commitish: "59b92b54"
+
+command: f"python nobrainerzoo/UCL/SynthSR/1.0.0/general/predict.py {infile[0]} {outfile}"
+# TODO: we should add help for options.
+options:
+  threads: {mandatory: False, argstr: "--threads", type: "int", default: 1}
+  cpu: {mandatory: False, argstr: "--cpu", is_flag: true}   
+  ct: {mandatury: False, argstr: "--ct", is_flag: true}
+#### input data characteristics
+data_spec:
+  input: {n_files: 1}
+  output: {n_files: 1}
+  
+  

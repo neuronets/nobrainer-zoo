@@ -1,21 +1,32 @@
-import os
+from pathlib import Path
+import subprocess as sp
 import datalad.api
 from utils import get_model_path
 
-def get_nobrainer_model(model_path):
+def get_model(model_path):
     """
-    downloads the nobrainer model located in model_path.
+    downloads the model located in model_path.
     
     """ 
+    model_repo = Path(__file__).resolve().parent / "trained-models"
     
     # if trained model is not already cloned
-    if not os.path.exists("nobrainerzoo/trained-models"):
-        url="git@github.com:neuronets/trained-models.git"
-        datalad.api.clone(source=url, path="nobrainerzoo/trained-models")
+    if not model_repo.exists():
+        url="https://github.com/neuronets/trained-models.git"
+        datalad.api.clone(source=url, path= model_repo)
+        p0=sp.run(["git", "config", "user.name", "nobrainer-zoo"],
+               stdout=sp.PIPE, stderr=sp.STDOUT, shell=True) #text=True)
+        print(p0.stdout)
+        p1=sp.run(["git", "config", "user.email", "nobrainer-zoo"],
+               stdout=sp.PIPE, stderr=sp.STDOUT, shell=True) #text=True)
+        print(p1.stdout)
+        # # set repo config with datalad api
+        # datalad.api.x_configuration('set', [('user.name', 'nobrainer-zoo'),
+        #                                     ('user.email', 'nobrainer-zoo')])
         
-    if not os.path.exists(model_path):
-        datalad.api.get(dataset="nobrainerzoo/trained-models",
-                        path=model_path,
+    if not Path(model_path).exists():
+        datalad.api.get(dataset= model_repo,
+                        path= model_path,
                         source="osf-storage")
         
 
@@ -29,6 +40,6 @@ if __name__ == '__main__':
         model_type = str(sys.argv[2])
         path = get_model_path(model_name, model_type)
     
-    get_nobrainer_model(path)
+    get_model(path)
 
 
