@@ -18,5 +18,10 @@
     "UCL/SynthSR/1.0.0": {
         "general": "general/SynthSR_v10_210712.h5",
         "hyperfine": "hyperfine/SynthSR_v10_210712_hyperfine.h5"
+    },
+    "DDIG/VoxelMorph/1.0.0": "vxm_dense_brain_T1_3D_mse.h5",
+    "DDIG/SynthMorph/1.0.0/": {
+        "brains": "brains-dice-vel-0.5-res-16-256f.h5",
+        "shapes": "shapes-dice-vel-3-res-8-16-32-256f.h5"
     }
 }
