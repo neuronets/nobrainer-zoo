@@ -5,7 +5,8 @@ import random
 import torch
 import torch.nn as nn
 import numpy as np
-import freesurfer as fs
+# import freesurfer as fs
+import nibabel as nib
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from torchvision.datasets.vision import VisionDataset
 from torchvision.datasets.utils import verify_str_arg
@@ -23,7 +24,7 @@ class PARC(VisionDataset):
             in_channels: int = 1,
             num_classes: int = 1,
             out_shape = [32, 256, 512],
-            mode = 'surf',
+            mode = 'image',
             multiplier = 1,
             stride: int = 1,
             labeled: bool = True,
@@ -72,14 +73,14 @@ class PARC(VisionDataset):
 
         index = index % len(self.signals)
 
-        if self.mode == 'surf':
-            image = torch.tensor([fs.Surface.read(self.spheres[index]).parameterize(fs.Overlay.read(signal).data) for signal in self.signals[index]])
-            label = torch.tensor([fs.Surface.read(self.spheres[index]).parameterize(fs.Overlay.read(self.parcels[index]).data, interp='nearest')]) if self.labeled \
-                else torch.zeros([1] + list(image.shape[1:]))
+        # if self.mode == 'surf':
+        #     image = torch.tensor([fs.Surface.read(self.spheres[index]).parameterize(fs.Overlay.read(signal).data) for signal in self.signals[index]])
+        #     label = torch.tensor([fs.Surface.read(self.spheres[index]).parameterize(fs.Overlay.read(self.parcels[index]).data, interp='nearest')]) if self.labeled \
+        #         else torch.zeros([1] + list(image.shape[1:]))
 
         if self.mode == 'image':
-            image = torch.tensor([fs.Image.read(signal + '.mgz').data for signal in self.signals[index]], dtype=torch.float32).permute(0,2,1)
-            label = torch.tensor([fs.Image.read(self.parcels[index] + '.mgz').data], dtype=torch.float32).permute(0,2,1) if self.labeled else torch.zeros([1] + list(image.shape[1:]))
+            image = torch.tensor([nib.load(signal + '.mgz').get_fdata()[:,:,0] for signal in self.signals[index]], dtype=torch.float32).permute(0,2,1)
+            label = torch.tensor([nib.load(self.parcels[index] + '.mgz').get_fdata()], dtype=torch.float32).permute(0,2,1) if self.labeled else torch.zeros([1] + list(image.shape[1:]))
 
         if self.transforms != None:
             image, label = self.transforms(image, label)
@@ -87,21 +88,21 @@ class PARC(VisionDataset):
         return image, label, index
 
     def save_output(self, root, outputs, indices):
-        os.makedirs(root, exist_ok=True)
         for i in range(0, len(outputs)):
-            filename = '%05d' % (indices[i])
-            if self.mode == 'surf':
-                parcel = fs.Overlay.read(self.parcels[indices[i]])
-                parcel.write(os.path.join(root,filename + '.label.annot'))
-                sphere = fs.Surface.read(self.spheres[indices[i]])
-                parcel = fs.Overlay(sphere.sample_parameterization(outputs[i].cpu().numpy(), interp='nearest'), lut=parcel.lut)
-                parcel.write(os.path.join(root,filename + '.image.annot'))
+            # filename = self.subjects[i] '%05d' % (indices[i])
+            # if self.mode == 'surf':
+            #     parcel = fs.Overlay.read(self.parcels[indices[i]])
+            #     parcel.write(os.path.join(root,filename + '.label.annot'))
+            #     sphere = fs.Surface.read(self.spheres[indices[i]])
+            #     parcel = fs.Overlay(sphere.sample_parameterization(outputs[i].cpu().numpy(), interp='nearest'), lut=parcel.lut)
+            #     parcel.write(os.path.join(root,filename + '.image.annot'))
 
             if self.mode == 'image':
                 # parcel = fs.Image.read(self.parcels[indices[i]] + '.mgz')
                 # parcel.write(os.path.join(root,filename + '.label.mgz'))
-                parcel = fs.Image(outputs[i].permute(0,2,1).cpu())
-                parcel.write(os.path.join(root,filename + '.image.mgz'))
+                parcel = nib.MGHImage(outputs[i].permute(0,2,1).short().cpu().numpy(), np.eye(4))#  fs.Image(outputs[i].permute(0,2,1).cpu())
+                os.makedirs(os.path.join(root, self.subjects[indices[i]]), exist_ok=True)
+                nib.save(parcel, os.path.join(root, self.subjects[indices[i]], 'parc.mgz')) #parcel.write(os.path.join(root,filename + '.image.mgz'))
 
     def __len__(self) -> int:
         return int(len(self.signals) * self.multiplier)
