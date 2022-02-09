@@ -257,7 +257,7 @@ def generate():
     "--model_type",
     default=None,
     type=str,
-    help="Type of model for kwyk and braingen model",
+    help="Type of model if there is more than one.",
     **_option_kwds,
 )
 @click.option(
@@ -344,27 +344,27 @@ def register(
     # download the model using container
     p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
     print(p0.stdout)
-
-    # download the model repository
-    if not org == "neuronets": # neuronet models do not need the repo download
+    
+    # download the model repository if needed
+    if spec["repo"]["repo_download"]:
       repo_info = spec.get("repo")
       # UCL organization has separate repositories for different models
       if org == "UCL":  
           org = org + "/" + model_nm
       get_repo(org, repo_info["repo_url"], repo_info["commitish"])
-               
-    # check the input data
-    moving_path = _check_input(moving, spec)
-    fixed_path = _check_input(fixed, spec)
+              
+    # check the input variables
+    moving_path = _check_input(_name(moving=moving), moving, spec)
+    fixed_path = _check_input(_name(fixed=fixed), fixed,spec)
     out_path = Path(moved).resolve().parent
     bind_paths = moving_path + fixed_path + [str(out_path)]
-    breakpoint()
+    
     # reading spec file in order to create options for model command
     options_spec = spec.get("options", {})
     
     # create model_path
-    # it is used by neuronets models 
-    model_path = get_model_path(model, model_type)
+    # it is used by some organizations like neuronet and voxelmorph 
+    model_path = get_model_path(model, model_type=model_type)
     
     # TODO: sould we check if an option is mandatory?
     model_options = []
@@ -640,16 +640,27 @@ def _check_model_type(model_name, model_type=None):
     elif mdl not in models_w_types and model_type != None:
         raise Exception(f"{model_name} does not have model type")
         
-def _check_input(infile, spec):
+def _check_input(infile_name,infile, spec):
     """Checks the infile path and returns the binding path for the container"""
-    # TODO: check if the infile is a dir 
-    n_inputs = spec["data_spec"]["input"]["n_files"]
-    if not n_inputs == "any" and len(infile) != n_inputs:
-        raise Exception(f"This model needs {n_inputs} input files but {len(infile)} files are given.")
+    # TODO: check if the infile is a dir
+    if infile is tuple:
+        n_infile = len(infile)
     else:
-        data_path  = [str(Path(file).resolve().parent) for file in infile]
+        n_infile = 1
+        infile = (infile,)
         
-    return data_path
+    n_inputs = spec["data_spec"][f"{infile_name}"]["n_files"]
+    if n_inputs != "any" and n_infile != n_inputs:
+        raise Exception(f"This model needs {n_inputs} input files but {n_infile} files are given.")
+   
+    return [str(Path(file).resolve().parent) for file in infile]
+
+def _name(**variables):
+    """Extracts the variable name.
+    Usage: _name(variables=variables)
+    """
+    # https://stackoverflow.com/questions/18425225/getting-the-name-of-a-variable-as-a-string
+    return [x for x in variables][0]
         
 # for debugging purposes    
 if __name__ == "__main__":

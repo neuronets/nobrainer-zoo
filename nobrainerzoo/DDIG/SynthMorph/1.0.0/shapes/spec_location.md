@@ -1,1 +1,0 @@
-synthmorpg shapes spec
