@@ -27,7 +27,7 @@ nobrainer-zoo train --help
 - [SynthSR](https://github.com/BBillot/SynthSR): Contrast, resolution and orientation invariant MRI/CT hyper resolution model (available for inference)
 
 
-List of models which will be added in near future can be find [here](https://github.com/Hoda1394/zoo/blob/add/inference_scripts/models_to_add.md). You can suggest a model [here]().
+List of models which will be added in near future can be find [here](https://github.com/Hoda1394/zoo/blob/add/inference_scripts/models_to_add.md). You can suggest a model [here](https://github.com/neuronets/zoo/issues/new/choose).
 
 *<font size="1">Note: models are distributed under their original license.</font>*
 
