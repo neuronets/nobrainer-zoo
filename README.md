@@ -1,5 +1,5 @@
 # Nobrainer-zoo
-Nobrainer-zoo is a toolbox with a collection of deep learning neuroimaging models that eases the use of pretrained models for various applications. Nobrainer-zoo provides the required environment with all the dependencies for training/inference of models. The only software needed is `singularity` or `Docker`.
+Nobrainer-zoo is a toolbox with a collection of deep learning neuroimaging models that eases the use of pretrained models for various applications. Nobrainer-zoo provides the required environment with all the dependencies for training/inference of models. You need `singularity` to run Nobrainer-zoo.
 
 To use the Nobrainer-zoo,
 
