@@ -17,4 +17,4 @@ Please add the Github page or the paper link for the model.
 Please describe your reason and points such as applications to neuroimaging.
 
 **Do you like to help us to add this model?**
-Please let us know if you like to contribute to adding it.
+Please let us know if you like to contribute to add it.
