@@ -25,7 +25,7 @@ def get_model_path(model_name, model_type=None):
     if not model_type:
         return root_path / model_name / models[model_name]
     else:
-        return root_path / model_name / models[model_name][model_type]
+        return root_path / model_name / model_type / models[model_name][model_type]
     
 
 def load_model(path):

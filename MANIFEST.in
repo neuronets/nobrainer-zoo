@@ -1,2 +1,5 @@
 include nobrainerzoo/neuronets/brainy/*.yaml
 include nobrainerzoo/neuronets/brainy/*/*.yaml
+include nobrainerzoo/neuronets/ams/*.yaml
+include nobrainerzoo/neuronets/brainy/*/*.yaml
+include nobrainerzoo/model_database.json

@@ -242,14 +242,183 @@ def generate():
 
 
 @cli.command()
-def register():
+@click.argument("moving", nargs=1, type=click.Path(exists=True))
+@click.argument("fixed", nargs=1, type=click.Path(exists=True))
+@click.argument("moved", nargs=1, type=click.Path())
+@click.option(
+    "-m",
+    "--model",
+    type=str,
+    required=True,
+    help="model name. should be in  the form of <org>/<model>/<version>",
+    **_option_kwds,
+)
+@click.option(
+    "--model_type",
+    default=None,
+    type=str,
+    help="Type of model if there is more than one.",
+    **_option_kwds,
+)
+@click.option(
+    "--container_type",
+    default="singularity",
+    type=str,
+    help="Type of the container technology (docker or singularity)",
+    **_option_kwds,
+)
+@click.option(
+    "--options",
+    type=str,
+    cls=OptionEatAll,
+    help="Model-specific options",
+    **_option_kwds,
+)
+def register(
+    moving,
+    fixed,
+    moved,
+    model,
+    model_type,
+    container_type,
+    options,
+    **kwrg
+):
     """
-    Creates output for brain registration.
+    registers the MOVING image to the FIXED image.
+
+    output saves in the path defined by MOVED argumet.
+
     """
-    click.echo(
-        "Not implemented yet. In the future, this command will be used for brain registration."
-    )
-    sys.exit(-2)
+    
+    org, model_nm, ver = model.split("/")
+    parent_dir = Path(__file__).resolve().parent
+    
+    # check model type
+    _check_model_type(model, model_type)
+    
+    if model_type:
+        model_dir = parent_dir / model / model_type
+    else:
+        model_dir = parent_dir / model
+    spec_file = model_dir / "spec.yaml"
+    
+    if not model_dir.exists():
+        raise Exception("model directory not found!",
+                        "This model does not exist in the zoo or didn't properly added.")
+    if not spec_file.exists():
+        raise Exception("spec file doesn't exist!",
+                        "This model does not exist in the zoo or didn't properly added.")
+       
+    with spec_file.open() as f:
+        spec = yaml.safe_load(f)
+        
+    # set the docker/singularity image    
+    image = _container_check(container_type=container_type, image_spec=spec.get("image"))
+    
+    if container_type == "singularity":
+        
+        download_image = parent_dir / "env/nobrainer-zoo_nobrainer.sif"
+        if not download_image.exists():
+            dwnld_cmd = ["singularity", "pull", "--dir", 
+                       str(parent_dir/ "env"),
+                       "docker://neuronets/nobrainer-zoo:nobrainer"]
+            p = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+            print(p.stdout)
+        cmd0 = ["singularity", "run", download_image, "python3", 
+                str(parent_dir/ "download.py"), model]
+        
+    elif container_type == "docker":
+        path = str(parent_dir)+":"+str(parent_dir)
+        loader = str(parent_dir / "download.py")
+        # check output option
+        cmd0 = ["docker", "run","-v",path,"-v",f"{parent_dir}:/output","-w","/output",
+                "--rm","neuronets/nobrainer-zoo:nobrainer", 
+                "python3", loader, model]
+    else:
+        raise ValueError(f"unknown container type: {container_type}")
+        
+    if model_type:
+            cmd0.append(model_type)
+            
+    # download the model using container
+    p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+    print(p0.stdout)
+    
+    # download the model repository if needed
+    if spec["repo"]["repo_download"]:
+      repo_info = spec.get("repo")
+      # UCL organization has separate repositories for different models
+      if org == "UCL":  
+          org = org + "/" + model_nm
+      get_repo(org, repo_info["repo_url"], repo_info["commitish"])
+              
+    # check the input variables
+    moving_path = _check_input(_name(moving=moving), moving, spec)
+    fixed_path = _check_input(_name(fixed=fixed), fixed,spec)
+    out_path = Path(moved).resolve().parent
+    bind_paths = moving_path + fixed_path + [str(out_path)]
+    
+    # reading spec file in order to create options for model command
+    options_spec = spec.get("options", {})
+    
+    # create model_path
+    # it is used by some organizations like neuronet and voxelmorph 
+    model_path = get_model_path(model, model_type=model_type)
+    
+    # TODO: sould we check if an option is mandatory?
+    model_options = []
+    if eval("options") is not None:
+        val_l = eval(eval("options"))
+        val_dict = {}
+        for el in  val_l:
+            if "=" in el:
+                key, val = el.split("=")
+                val_dict[key] = val
+            else:
+                val_dict[el] = None
+
+        # updating command with the argument provided in the command line
+        for name, in_spec in options_spec.items():
+            if name in val_dict.keys():
+                argstr = in_spec.get("argstr", "")
+                value = val_dict[name]
+                if in_spec.get("is_flag"):
+                    model_options.append(argstr)
+                    continue
+                elif argstr:
+                    model_options.append(argstr)
+
+                if in_spec.get("type") == "list":
+                    model_options.extend([str(el) for el in eval(value)])
+                else:
+                    model_options.append(str(value))
+                  
+    # reading command from the spec file (allowing for f-string)
+    try:
+        model_cmd = eval(spec["command"])
+    except NameError:
+        model_cmd = spec["command"]
+       
+    if container_type == "singularity":
+        bind_paths = ",".join(bind_paths)
+        cmd_options = ["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
+        cmd = ["singularity", "run"] + cmd_options + [image] + model_cmd.split() \
+            + model_options
+    elif container_type == "docker":
+        bind_paths_docker = []
+        for el in bind_paths:
+            bind_paths_docker += ["-v", f"{el}:{el}"]
+        cmd_options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
+        cmd = ["docker", "run"] + cmd_options + [image] + model_cmd.split() \
+            + model_options
+    else:
+        raise ValueError(f"unknown container type: {container_type}")
+    
+    # run command
+    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+    print(p1.stdout)
+    
 
 
 @cli.command()
@@ -471,16 +640,27 @@ def _check_model_type(model_name, model_type=None):
     elif mdl not in models_w_types and model_type != None:
         raise Exception(f"{model_name} does not have model type")
         
-def _check_input(infile, spec):
+def _check_input(infile_name,infile, spec):
     """Checks the infile path and returns the binding path for the container"""
-    # TODO: check if the infile is a dir 
-    n_inputs = spec["data_spec"]["input"]["n_files"]
-    if not n_inputs == "any" and len(infile) != n_inputs:
-        raise Exception(f"This model needs {n_inputs} input files but {len(infile)} files are given.")
+    # TODO: check if the infile is a dir
+    if infile is tuple:
+        n_infile = len(infile)
     else:
-        data_path  = [str(Path(file).resolve().parent) for file in infile]
+        n_infile = 1
+        infile = (infile,)
         
-    return data_path
+    n_inputs = spec["data_spec"][f"{infile_name}"]["n_files"]
+    if n_inputs != "any" and n_infile != n_inputs:
+        raise Exception(f"This model needs {n_inputs} input files but {n_infile} files are given.")
+   
+    return [str(Path(file).resolve().parent) for file in infile]
+
+def _name(**variables):
+    """Extracts the variable name.
+    Usage: _name(variables=variables)
+    """
+    # https://stackoverflow.com/questions/18425225/getting-the-name-of-a-variable-as-a-string
+    return [x for x in variables][0]
         
 # for debugging purposes    
 if __name__ == "__main__":
