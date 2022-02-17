@@ -17,6 +17,7 @@ Some models (`kwyk` and `braingen`) also have various types which means there wa
 nobrainer-zoo --help
 nobrainer-zoo predict --help
 nobrainer-zoo train --help
+nobrainer-zoo register --help
 ```
 
 # Available models
@@ -26,6 +27,8 @@ nobrainer-zoo train --help
 - [kwyk](https://github.com/neuronets/kwyk): 3D brain tissue segmentation model (available for inference)
 - [SynthSeg](https://github.com/BBillot/SynthSeg): Contrast and resolution invariant 3D brain segmentation model (available for inference)
 - [SynthSR](https://github.com/BBillot/SynthSR): Contrast, resolution and orientation invariant MRI/CT hyper resolution model (available for inference)
+- [Synthmorph](https://github.com/voxelmorph/voxelmorph): 3D contrast agnnostic registration model (available for inference)
+- [Voxelmorph](https://github.com/voxelmorph/voxelmorph): 3D learning based registration model (available for inference)
 
 
 List of models which will be added in near future can be find [here](https://github.com/Hoda1394/zoo/blob/add/inference_scripts/models_to_add.md). You can suggest a model [here](https://github.com/neuronets/zoo/issues/new/choose).
