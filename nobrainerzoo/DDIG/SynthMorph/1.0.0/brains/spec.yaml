@@ -10,11 +10,12 @@ repo:
     repo_download_location: "None"
 
 
-command: f"nobrainerzoo/DDIG/SynthMorph/1.0.0/register.py --moving {moving} --fixed {fixed} --model {model_path} --out-moved {moved}"
+command: f"nobrainerzoo/DDIG/SynthMorph/1.0.0/register.py --moving {moving} --fixed {fixed} --model {model_path} --moved {moved}"
 # TODO: we should add help for model options
 options:
-  out-warp: {mandatory: False, argstr: "--out-warp", type: "str"}  
+  warp: {mandatory: False, argstr: "--warp", type: "str"}  
   gpu: {mandatory: False, default: "None", argstr: "--gpu", type: "int"}
+  multichannel: {mandatory: False, is_flag: true}
   
 #### input data characteristics
 data_spec:

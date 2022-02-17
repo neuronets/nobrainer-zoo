@@ -1,90 +1,74 @@
 #!/usr/bin/env python
 
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at:
-# 
-# https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+"""
+Example script to register two volumes with VoxelMorph models.
 
-import argparse
-import numpy as np
-import tensorflow as tf
-import voxelmorph as vxm
-
-
-# reference
-ref = '''
-If you find this code useful, please cite:
-
-    Learning MRI Contrast-Agnostic Registration.
-    Hoffmann M, Billot B, Iglesias JE, Fischl B, Dalca AV.
-    IEEE International Symposium on Biomedical Imaging (ISBI), pp 899-903, 2021.
-    https://doi.org/10.1109/ISBI48211.2021.9434113
-'''
-
-
-# parse command line
-p = argparse.ArgumentParser(
-    formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=f'''
-Register two image volumes with a SynthMorph model. For accurate deformable
-registration, the source and target input images are expected to be aligned
-within the affine space used at training.
-
-Example:
+Please make sure to use trained models appropriately. Let's say we have a model trained to register
+a scan (moving) to an atlas (fixed). To register a scan to the atlas and save the warp field, run:
 
     register.py --moving moving.nii.gz --fixed fixed.nii.gz --model model.h5 
-        --out_moved moved.nii.gz --out-warp warp.nii.gz
-{ref}
-''')
+        --moved moved.nii.gz --warp warp.nii.gz
 
-p.add_argument('--moving', required=True, help='path to moving (source) image')
-p.add_argument('--fixed', required=True, help='path to fixed (target) image')
-p.add_argument('--model', required=True, help='path to H5 model file')
-p.add_argument('--out-moved', help='output warped image path')
-p.add_argument('--out-warp', help='output deformation field path')
-p.add_argument('--gpu', help='ID of GPU to use, defaults to CPU')
-arg = p.parse_args()
+The source and target input images are expected to be affinely registered.
 
+If you use this code, please cite the following, and read function docs for further info/citations
+    VoxelMorph: A Learning Framework for Deformable Medical Image Registration
+    G. Balakrishnan, A. Zhao, M. R. Sabuncu, J. Guttag, A.V. Dalca. 
+    IEEE TMI: Transactions on Medical Imaging. 38(8). pp 1788-1800. 2019. 
+
+Copyright 2020 Adrian V. Dalca
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
+compliance with the License. You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is
+distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied. See the License for the specific language governing permissions and limitations under the
+License.
+"""
+
+import os
+import argparse
+import numpy as np
+import voxelmorph as vxm
+import tensorflow as tf
+
+
+# parse commandline args
+parser = argparse.ArgumentParser()
+parser.add_argument('--moving', required=True, help='moving image (source) filename')
+parser.add_argument('--fixed', required=True, help='fixed image (target) filename')
+parser.add_argument('--moved', required=True, help='warped image output filename')
+parser.add_argument('--model', required=True, help='keras model for nonlinear registration')
+parser.add_argument('--warp', help='output warp deformation filename')
+parser.add_argument('-g', '--gpu', help='GPU number(s) - if not supplied, CPU is used')
+parser.add_argument('--multichannel', action='store_true',
+                    help='specify that data has multiple channels')
+args = parser.parse_args()
 
 # tensorflow device handling
-vxm.tf.utils.setup_device(arg.gpu)
+device, nb_devices = vxm.tf.utils.setup_device(args.gpu)
 
+# load moving and fixed images
+add_feat_axis = not args.multichannel
+moving = vxm.py.utils.load_volfile(args.moving, add_batch_axis=True, add_feat_axis=add_feat_axis)
+fixed, fixed_affine = vxm.py.utils.load_volfile(
+    args.fixed, add_batch_axis=True, add_feat_axis=add_feat_axis, ret_affine=True)
 
-def load(f):
-    '''Load and normalize image volume.'''
-    im, aff = vxm.py.utils.load_volfile(
-        f, add_batch_axis=True, add_feat_axis=True, ret_affine=True,
-    )
-    im = np.asarray(im, np.float32)
-    im -= np.min(im)
-    im /= np.max(im)
-    return im, aff
+inshape = moving.shape[1:-1]
+nb_feats = moving.shape[-1]
 
+with tf.device(device):
+    # load model and predict
+    config = dict(inshape=inshape, input_model=None)
+    warp = vxm.networks.VxmDense.load(args.model, **config).register(moving, fixed)
+    moved = vxm.networks.Transform(inshape, nb_feats=nb_feats).predict([moving, warp])
 
-# load images
-moving, _ = load(arg.moving)
-fixed, affine = load(arg.fixed)
-in_shape = moving.shape[1:-1]
+# save warp
+if args.warp:
+    vxm.py.utils.save_volfile(warp.squeeze(), args.warp, fixed_affine)
 
-
-# load model and predict
-model = vxm.networks.VxmDense.load(arg.model, input_model=None)
-warp = model.register(moving, fixed)
-moved = vxm.networks.Transform(in_shape).predict([moving, warp])
-
-
-# save outputs
-if arg.out_moved:
-    vxm.py.utils.save_volfile(np.squeeze(moved), arg.out_moved, affine)
-if arg.out_warp:
-    vxm.py.utils.save_volfile(np.squeeze(warp), arg.out_warp, affine)
-
-
-print('\nThank you for using SynthMorph!', ref.lstrip())
+# save moved image
+vxm.py.utils.save_volfile(moved.squeeze(), args.moved, fixed_affine)
