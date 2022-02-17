@@ -1,5 +1,5 @@
 # Nobrainer-zoo
-Nobrainer-zoo is a toolbox with a collection of deep learning neuroimaging models that eases the use of pretrained models for various applications. Nobrainer-zoo provides the required environment with all the dependencies for training/inference of models. The only software needed is `singularity` or `Docker`.
+Nobrainer-zoo is a toolbox with a collection of deep learning neuroimaging models that eases the use of pretrained models for various applications. Nobrainer-zoo provides the required environment with all the dependencies for training/inference of models. You need `singularity` to run Nobrainer-zoo.
 
 To use the Nobrainer-zoo,
 
@@ -23,11 +23,12 @@ nobrainer-zoo train --help
 
 - [brainy](https://github.com/neuronets/brainy): 3D U-Net brain extraction model (available for training and inference)
 - [ams](https://github.com/neuronets/ams): 3D U-Net meningioma segmentation model (available for training and inference)
+- [kwyk](https://github.com/neuronets/kwyk): 3D brain tissue segmentation model (available for inference)
 - [SynthSeg](https://github.com/BBillot/SynthSeg): Contrast and resolution invariant 3D brain segmentation model (available for inference)
 - [SynthSR](https://github.com/BBillot/SynthSR): Contrast, resolution and orientation invariant MRI/CT hyper resolution model (available for inference)
 
 
-List of models which will be added in near future can be find [here](https://github.com/Hoda1394/zoo/blob/add/inference_scripts/models_to_add.md). You can suggest a model [here]().
+List of models which will be added in near future can be find [here](https://github.com/Hoda1394/zoo/blob/add/inference_scripts/models_to_add.md). You can suggest a model [here](https://github.com/neuronets/zoo/issues/new/choose).
 
 *<font size="1">Note: models are distributed under their original license.</font>*
 
