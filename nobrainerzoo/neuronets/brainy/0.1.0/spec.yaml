@@ -16,5 +16,5 @@ options:
   verbose: {argstr: "-v", is_flag: true}
 #### input data characteristics
 data_spec:
-  input: {n_files: 1}
-  output: {n_files: 1}
+  infile: {n_files: 1}
+  outfile: {n_files: 1}
