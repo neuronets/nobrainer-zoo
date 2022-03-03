@@ -120,7 +120,7 @@ def predict(
     if not spec_file.exists():
         raise Exception("spec file doesn't exist!",
                         "This model does not exist in the zoo or didn't properly added.")
-       
+      
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
         
@@ -165,7 +165,7 @@ def predict(
       get_repo(org, repo_info["repo_url"], repo_info["commitish"])
                
     # check the input data
-    data_path = _check_input(infile, spec)
+    data_path = _check_input(_name(infile=infile), infile, spec)
     out_path = Path(outfile).resolve().parent
     bind_paths = data_path + [str(out_path)]
     
@@ -643,7 +643,7 @@ def _check_model_type(model_name, model_type=None):
 def _check_input(infile_name,infile, spec):
     """Checks the infile path and returns the binding path for the container"""
     # TODO: check if the infile is a dir
-    if infile is tuple:
+    if isinstance(infile, tuple):
         n_infile = len(infile)
     else:
         n_infile = 1
@@ -651,7 +651,7 @@ def _check_input(infile_name,infile, spec):
         
     n_inputs = spec["data_spec"][f"{infile_name}"]["n_files"]
     if n_inputs != "any" and n_infile != n_inputs:
-        raise Exception(f"This model needs {n_inputs} input files but {n_infile} files are given.")
+        raise ValueError(f"This model needs {n_inputs} input files but {n_infile} files are given.")
    
     return [str(Path(file).resolve().parent) for file in infile]
 
