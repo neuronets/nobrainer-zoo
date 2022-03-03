@@ -101,7 +101,7 @@ def predict(
     Saves the output file to the path defined by outfile.
 
     """
-    
+
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
     
