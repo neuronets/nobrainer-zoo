@@ -23,13 +23,12 @@ def get_model(model_path):
         # # set repo config with datalad api
         # datalad.api.x_configuration('set', [('user.name', 'nobrainer-zoo'),
         #                                     ('user.email', 'nobrainer-zoo')])
-        
-    if not Path(model_path).exists():
-        datalad.api.get(dataset= model_repo,
-                        path= model_path,
-                        source="osf-storage")
-        
-
+    
+    # leave the decision to datalad run "datalad get" anyway! 
+    datalad.api.get(dataset= model_repo,
+                         path= model_path,
+                         source="osf-storage")    
+    
 if __name__ == '__main__':
     import sys
     if len(sys.argv) == 2:
