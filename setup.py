@@ -1,18 +1,25 @@
-from setuptools import setup #,find_packages
+from setuptools import setup
 
-setup(name="nobrainer-zoo")
+import os
+import sys
 
-# setup(
-#     name="nobrainer-zoo",
-#     version='0.0.1',
-#     packages=find_packages(),
-#     include_package_data=True,
-#     install_requires=[
-#         'Click',
-#         'pyyaml'
-#     ],
-#     entry_points='''
-#         [console_scripts]
-#         nobrainer-zoo=nobrainerzoo.cli:cli
-#     ''',
-# )
+# This is needed for versioneer to be importable when building with PEP 517.
+# See <https://github.com/warner/python-versioneer/issues/193> and links
+# therein for more information.
+
+sys.path.append(os.path.dirname(__file__))
+
+try:
+    import versioneer
+
+    setup_kw = {
+        "version": versioneer.get_version(),
+        "cmdclass": versioneer.get_cmdclass(),
+    }
+except ImportError:
+    # see https://github.com/warner/python-versioneer/issues/192
+    print("WARNING: failed to import versioneer, falling back to no version for now")
+    setup_kw = {}
+
+
+setup(name="nobrainer-zoo", **setup_kw)
