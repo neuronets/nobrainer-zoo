@@ -1,0 +1,27 @@
+{
+    "neuronets/ams/0.1.0": "weights/meningioma_T1wc_128iso_v1.h5",
+    "neuronets/braingen/0.1.0": {
+        "res_8": "generator_res_8/weights",
+        "res_16": "generator_res_16/weights",
+        "res_32": "generator_res_32/weights",
+        "res_64": "generator_res_64/weights",
+        "res_128": "generator_res_128/weights",
+        "res_256": "generator_res_256/weights"
+    },
+    "neuronets/brainy/0.1.0": "weights/brain-extraction-unet-128iso-model.h5",
+    "neuronets/kwyk/0.4.1": {
+        "bwn": "all_50_wn/weights",
+        "bwn_multi": "all_50_bwn_09_multi/weights",
+        "bvwn_multi_prior": "all_50_bvwn_multi_prior/weights"
+    },
+    "UCL/SynthSeg/0.1": "weights/SynthSeg.h5",
+    "UCL/SynthSR/1.0.0": {
+        "general": "general/weights/SynthSR_v10_210712.h5",
+        "hyperfine": "general/weights/SynthSR_v10_210712_hyperfine.h5"
+    },
+    "DDIG/VoxelMorph/1.0.0": "weights/vxm_dense_brain_T1_3D_mse.h5",
+    "DDIG/SynthMorph/1.0.0": {
+        "brains": "brains/weights/brains-dice-vel-0.5-res-16-256f.h5",
+        "shapes": "shapes/weights/shapes-dice-vel-3-res-8-16-32-256f.h5"
+    }
+}
