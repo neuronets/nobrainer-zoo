@@ -3,3 +3,5 @@ include nobrainerzoo/neuronets/brainy/*/*.yaml
 include nobrainerzoo/neuronets/ams/*.yaml
 include nobrainerzoo/neuronets/brainy/*/*.yaml
 include nobrainerzoo/model_database.json
+include versioneer.py
+include nobrainer-zoo/_version.py

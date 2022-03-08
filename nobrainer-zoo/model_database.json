@@ -11,7 +11,7 @@
     "neuronets/brainy/0.1.0": "weights/brain-extraction-unet-128iso-model.h5",
     "neuronets/kwyk/0.4.1": {
         "bwn": "all_50_wn/weights",
-        "bwn_multi": "/all_50_bwn_09_multi/weights",
+        "bwn_multi": "all_50_bwn_09_multi/weights",
         "bvwn_multi_prior": "all_50_bvwn_multi_prior/weights"
     },
     "UCL/SynthSeg/0.1": "weights/SynthSeg.h5",
