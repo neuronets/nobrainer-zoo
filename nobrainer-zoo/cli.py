@@ -6,6 +6,10 @@ import yaml
 import sys, shutil
 
 _option_kwds = {"show_default": True}
+helper_dir = Path(__file__).resolve().parents[2]
+models_path = helper_dir / "trained-models"
+env_path = helper_dir / "env"
+data_path = helper_dir / "data"
 
 
 # https://stackoverflow.com/a/48394004/5666087
@@ -104,6 +108,8 @@ def predict(
 
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
+    
+    # get the model database
     
     # check model type
     _check_model_type(model, model_type)
