@@ -150,10 +150,11 @@ def predict(
             print(p.stdout)
         # mount CACHE_PATH to /cache_dir, I will be using that path in some functions
         cmd0 = ["singularity", "run",
-               "-B", f"{CACHE_PATH}:/cache_dir",
-                download_image, "python3", 
-                str( parent_dir / "download.py"), "/cache_dir/trained-models", model]
-        
+                "-B", str(CACHE_PATH),
+               #"-B", f"{CACHE_PATH}:/cache_dir",
+                download_image, "python3",
+                str( parent_dir / "download.py"), MODELS_PATH, model]
+                #str( parent_dir / "download.py"), "/cache_dir/trained-models", model]    
     elif container_type == "docker":
         path = str(parent_dir)+":"+str(parent_dir)
         loader = str(parent_dir / "download.py")
@@ -263,22 +264,39 @@ def generate():
 
 
 # TODO: allowing for different location
-
 @cli.command()
 def init():
     """ Initialize ..."""
     print(f"Creating a cache directory in {CACHE_PATH}, if you want " 
           "to change the location you can point environmental variable  NOBRAINER_CACHE "
-          "to the location where .nobrainer directory will be created")
+          "to the location where .nobrainer directory will be created. "
+          "run 'EXPORT NOBRAINER_CACHE=<path_to_your_location>")
     os.makedirs(CACHE_PATH, exist_ok=True)
-    # adding trained_model repository
-    # for now we will overwrite every single time someone runs init
-    if MODELS_PATH.exists():
-        shutil.rmtree(MODELS_PATH)
-    get_repo("https://github.com/neuronets/trained-models", MODELS_PATH)
     #create subdirectory for images, data
     os.makedirs(IMAGES_PATH, exist_ok=True)
     os.makedirs(DATA_PATH, exist_ok=True)
+    # adding trained_model repository, we should use datalad
+    if shutil.which("singularity") is None:
+            raise Exception("singularity is not installed")
+    else:
+        download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
+        if not download_image.exists():
+            dwnld_cmd = ["singularity", "pull", "--dir", 
+                         str(IMAGES_PATH),
+                       "docker://neuronets/nobrainer-zoo:nobrainer"]
+            p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+            print(p0.stdout)   
+    # for now we will overwrite every single time someone runs init
+    if MODELS_PATH.exists():
+        shutil.rmtree(MODELS_PATH)
+    # TODO: we should clone via datalad! unless the osf remote will not be available!    
+    #get_repo("https://github.com/neuronets/trained-models", MODELS_PATH)
+    clone_cmd = ["singularity", "run", "-B", CACHE_PATH,download_image, "datalad",
+                 "clone", "https://github.com/neuronets/trained-models", MODELS_PATH]
+    
+    p1 = sp.run(clone_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+    print(p1.stdout)
+    
 
 
 @cli.command()

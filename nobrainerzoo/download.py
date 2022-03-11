@@ -10,7 +10,7 @@ def get_model(model_repo, model_path):
     downloads the model weights.
     
     """ 
-    models_repo = Path(model_repo, model_path)
+    models_repo = Path(model_repo)
     
     # if trained model is not already cloned
     if not models_repo.exists():
@@ -34,7 +34,6 @@ def get_model(model_repo, model_path):
     
     
     # leave the decision to datalad run "datalad get" anyway! 
-    print("I'm in get model!!!")
     datalad.api.get(dataset= model_repo,
                          path= model_path,
                          source="osf-storage")

@@ -81,7 +81,7 @@ def get_model_db(models_repo):
             org = pth.parts[-5]
             model_name = pth.parts[-4]
             version = pth.parts[-3]
-            print(org+"/"+model_name+"/"+version)
+            #print(org+"/"+model_name+"/"+version)
             model = org+"/"+model_name+"/"+version
             # check the model extention
             if not pth.suffix == '.pb':
@@ -94,7 +94,7 @@ def get_model_db(models_repo):
             model_name = pth.parts[-5]
             version = pth.parts[-4]
             model_type = pth.parts[-3]
-            print(org+"/"+model_name+"/"+version+"/"+model_type)
+            #print(org+"/"+model_name+"/"+version+"/"+model_type)
             model = org+"/"+model_name+"/"+version
             # to avoid deleting previously added model types
             if  not model in model_db:
