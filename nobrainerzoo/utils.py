@@ -32,23 +32,25 @@ def load_model(path):
         model = _get_model(path)
     return model
 
-def get_repo(org, repo_url, repo_state):
+def get_repo(repo_url, destination, repo_state=None):
     """
-    downoads the related repo in the org/org_repo.
-    org: str, organization name
-    
+    downoads the related repo to the destination.
+    repo_url: str, url of the git repository
+    destination: Path or str, destination on the local file system
+    repo_state: optional, git commit
+   
     """
-    repo_path = Path(__file__).resolve().parents[0] / org / "org_repo"
-    if not repo_path.exists():
-        p0 = sp.run(["git", "clone", repo_url, str(repo_path)], stdout=sp.PIPE,
+    if not destination.exists():
+        p0 = sp.run(["git", "clone", repo_url, str(destination)], stdout=sp.PIPE,
                     stderr=sp.STDOUT ,text=True)
         print(p0.stdout)
-        p1 = sp.run(["git","-C",str(repo_path),"checkout", repo_state], stdout=sp.PIPE,
-                    stderr=sp.STDOUT ,text=True)
-        print(p1.stdout)
-        print(f"{org} repository is downloaded")
+        if repo_state:
+            p1 = sp.run(["git", "-C", str(destination), "checkout", repo_state], stdout=sp.PIPE,
+                        stderr=sp.STDOUT, text=True)
+            print(p1.stdout)
+        print(f"{repo_url} repository is downloaded")
     else:
-        print(f"{org} repository is available locally")
+        print(f"{repo_url} repository is available locally")
         
 
 def get_model_db(models_repo):
@@ -72,8 +74,9 @@ def get_model_db(models_repo):
         paths.extend(sorted(Path(models_repo).rglob(ext)))
 
     model_db={}    
-    for pth in paths:
-    
+#    breakpoint()
+    for i, pth in enumerate(paths):
+        #breakpoint()
         if pth.parts[-6] == 'trained-models':   # if no model_type
             org = pth.parts[-5]
             model_name = pth.parts[-4]
@@ -103,7 +106,8 @@ def get_model_db(models_repo):
                 model_db[model][model_type] = str(pth.parents[0])
                 
         else:
-            raise Exception(f"The {pth} is not added in proper format and it should be checked!",
+            # TODO: consider if the exception should be raised or not
+            print(f"{i}: The {pth} is not added in proper format and it should be checked!",
                             " It is NOT considered to model database.")
             
     return model_db

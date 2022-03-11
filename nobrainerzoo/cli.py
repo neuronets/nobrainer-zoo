@@ -1,15 +1,19 @@
-from nobrainerzoo.utils import get_model_path, get_repo
+from nobrainerzoo.utils import get_model_path, get_repo, get_model_db
 import subprocess as sp
 from pathlib import Path
 import click
 import yaml
-import sys, shutil
+import os, sys, shutil
 
 _option_kwds = {"show_default": True}
-helper_dir = Path(__file__).resolve().parents[2]
-models_path = helper_dir / "trained-models"
-env_path = helper_dir / "env"
-data_path = helper_dir / "data"
+
+if "NOBRAINER_CACHE" in os.environ:
+    CACHE_PATH = Path(os.environ["NOBRAINER_CACHE"]) / ".nobrainer"
+else:
+    CACHE_PATH = Path(os.path.expanduser('~')) / ".nobrainer"
+MODELS_PATH = CACHE_PATH / "trained-models"
+IMAGES_PATH = CACHE_PATH / "images"
+DATA_PATH = CACHE_PATH / "data"
 
 
 # https://stackoverflow.com/a/48394004/5666087
@@ -51,6 +55,7 @@ class OptionEatAll(click.Option):
                 our_parser.process = parser_process
                 break
         return retval
+
 
 
 @click.group()
@@ -108,16 +113,15 @@ def predict(
 
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
-    
     # get the model database
     
     # check model type
     _check_model_type(model, model_type)
     
     if model_type:
-        model_dir = parent_dir / model / model_type
+        model_dir = MODELS_PATH / model / model_type
     else:
-        model_dir = parent_dir / model
+        model_dir = MODELS_PATH / model
     spec_file = model_dir / "spec.yaml"
     
     if not model_dir.exists():
@@ -130,57 +134,65 @@ def predict(
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
         
-    # set the docker/singularity image    
+    # set the docker/singularity image
     image = _container_check(container_type=container_type, image_spec=spec.get("image"))
-    
     if container_type == "singularity":
-        
-        download_image = parent_dir / "env/nobrainer-zoo_nobrainer.sif"
+        # TODO HODA: looks like _container_check downloads the image, so perhaps
+        # TODO HODA: you can remove the additional download below?
+        download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
         if not download_image.exists():
             dwnld_cmd = ["singularity", "pull", "--dir", 
-                       str(parent_dir/ "env"),
+                         str(IMAGES_PATH),
                        "docker://neuronets/nobrainer-zoo:nobrainer"]
             p = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
             print(p.stdout)
-        cmd0 = ["singularity", "run", download_image, "python3", 
-                str(parent_dir/ "download.py"), model]
+        # HODA: I mount CACHE_PATH to /cache_dir, I will be using that path in some functions
+        cmd0 = ["singularity", "run",
+               "-B", f"{CACHE_PATH}:/cache_dir",
+                download_image, "python3", 
+                str( parent_dir / "download.py"), "/cache_dir/trained-models", model]
         
     elif container_type == "docker":
         path = str(parent_dir)+":"+str(parent_dir)
         loader = str(parent_dir / "download.py")
         # check output option
-        cmd0 = ["docker", "run","-v",path,"-v",f"{parent_dir}:/output","-w","/output",
+        # TODO: we don't have to mount parent_dir
+        cmd0 = ["docker", "run","-v",path,"-v",f"{parent_dir}:/output",
+                "-v", f"{CACHE_PATH}:/cache_dir"
+                "-w","/output",
                 "--rm","neuronets/nobrainer-zoo:nobrainer", 
-                "python3", loader, model]
+                "python3", loader, "/cache_dir/trained-models", model]
     else:
         raise ValueError(f"unknown container type: {container_type}")
-        
     if model_type:
-            cmd0.append(model_type)
+        cmd0.append(model_type)
             
+
     # download the model using container
     p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+    # TODO: we should be catching the errors (instead of only printing)
     print(p0.stdout)
-
     # download the model repository
     if not org == "neuronets": # neuronet models do not need the repo download
-      repo_info = spec.get("repo")
-      # UCL organization has separate repositories for different models
-      if org == "UCL":  
-          org = org + "/" + model_nm
-      get_repo(org, repo_info["repo_url"], repo_info["commitish"])
+        repo_info = spec.get("repo")
+        # UCL organization has separate repositories for different models
+        if org == "UCL":  
+            org = org + "/" + model_nm
+        repo_dest = CACHE_PATH / org / "org_repo"
+        get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
                
+    # TODO HODA: you changed the structure of spec.yml file, please double check if my changes are correct
+    spec = spec["inference"]
     # check the input data
     data_path = _check_input(_name(infile=infile), infile, spec)
     out_path = Path(outfile).resolve().parent
     bind_paths = data_path + [str(out_path)]
-    
     # reading spec file in order to create options for model command
     options_spec = spec.get("options", {})
-    
     # create model_path
     # it is used by neuronets models 
-    model_path = get_model_path(model, model_type)
+    model_db = get_model_db(MODELS_PATH)
+    model_path = get_model_path(model_db, model, model_type)
     
     # TODO: sould we check if an option is mandatory?
     model_options = []
@@ -245,6 +257,25 @@ def generate():
         "Not implemented yet. In the future, this command will be used to generate output from GAN models."
     )
     sys.exit(-2)
+
+
+# TODO: allowing for different location
+
+@cli.command()
+def init():
+    """ Initialize ..."""
+    print(f"Creating a cache directory in {CACHE_PATH}, if you want " 
+          "to change the location you can point environmental variable  NOBRAINER_CACHE "
+          "to the location where .nobrainer directory will be created")
+    os.makedirs(CACHE_PATH, exist_ok=True)
+    # adding trained_model repository
+    # for now we will overwrite every single time someone runs init
+    if MODELS_PATH.exists():
+        shutil.rmtree(MODELS_PATH)
+    get_repo("https://github.com/neuronets/trained-models", MODELS_PATH)
+    #create subdirectory for images, data
+    os.makedirs(IMAGES_PATH, exist_ok=True)
+    os.makedirs(DATA_PATH, exist_ok=True)
 
 
 @cli.command()
@@ -345,7 +376,7 @@ def register(
         raise ValueError(f"unknown container type: {container_type}")
         
     if model_type:
-            cmd0.append(model_type)
+        cmd0.append(model_type)
             
     # download the model using container
     p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
@@ -353,11 +384,12 @@ def register(
     
     # download the model repository if needed
     if spec["repo"]["repo_download"]:
-      repo_info = spec.get("repo")
-      # UCL organization has separate repositories for different models
-      if org == "UCL":  
-          org = org + "/" + model_nm
-      get_repo(org, repo_info["repo_url"], repo_info["commitish"])
+        repo_info = spec.get("repo")
+        # UCL organization has separate repositories for different models
+        if org == "UCL":
+            org = org + "/" + model_nm
+        repo_dest = CACHE_PATH / org / "org_repo"
+        get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
               
     # check the input variables
     moving_path = _check_input(_name(moving=moving), moving, spec)
@@ -588,20 +620,18 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
 def _container_check(container_type, image_spec, docker_ok=True):
     if image_spec is None:
         raise Exception("image not provided in the specification")
-        
     if container_type == "singularity":
         if shutil.which("singularity") is None:
             raise Exception("singularity is not installed")
         if container_type in image_spec:
             image = image_spec[container_type]
-            image = Path(__file__).resolve().parents[0] / f"env/{image}"
+            image = IMAGES_PATH / f"{image}"
             if not image.exists():
                 # pull image from dockerhub
                 print("Container does not exists locally!")
                 print("Downloading the container file. it might take a while...")
                 pull_image = "docker://"+image_spec["docker"]
-                path = Path(__file__).resolve().parents[0] / "env/"
-                pull_cmd = ["singularity","pull","--dir", path, pull_image]
+                pull_cmd = ["singularity","pull","--dir", IMAGES_PATH, pull_image]
                 pr = sp.run(pull_cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
                 print(pr.stdout)
                 
@@ -631,10 +661,10 @@ def _container_check(container_type, image_spec, docker_ok=True):
 def _check_model_type(model_name, model_type=None):
     import json
     # load model database
-    ds_path = Path(__file__).resolve().parent / "model_database.json"
-    with open(ds_path, "r") as fp:
-        models=json.load(fp)
-        
+    #ds_path = Path(__file__).resolve().parent / "model_database.json"
+    #with open(ds_path, "r") as fp:
+    #    models=json.load(fp)
+    models = get_model_db(MODELS_PATH)     
     org,mdl,ver = model_name.split("/")
     
     models_w_types = [m.split("/")[1] for m,v in models.items() if isinstance(v,dict)]
@@ -654,7 +684,6 @@ def _check_input(infile_name,infile, spec):
     else:
         n_infile = 1
         infile = (infile,)
-        
     n_inputs = spec["data_spec"][f"{infile_name}"]["n_files"]
     if n_inputs != "any" and n_infile != n_inputs:
         raise ValueError(f"This model needs {n_inputs} input files but {n_infile} files are given.")
