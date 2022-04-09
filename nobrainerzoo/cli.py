@@ -263,42 +263,52 @@ def generate():
     sys.exit(-2)
 
 
-# TODO: allowing for different location
 @cli.command()
 def init():
     """ Initialize ..."""
     print(f"Creating a cache directory in {CACHE_PATH}, if you want " 
           "to change the location you can point environmental variable  NOBRAINER_CACHE "
           "to the location where .nobrainer directory will be created. "
-          "run 'EXPORT NOBRAINER_CACHE=<path_to_your_location>")
+          "run 'export NOBRAINER_CACHE=<path_to_your_location>")
+
     os.makedirs(CACHE_PATH, exist_ok=True)
     #create subdirectory for images, data
     os.makedirs(IMAGES_PATH, exist_ok=True)
     os.makedirs(DATA_PATH, exist_ok=True)
-    # adding trained_model repository, we should use datalad
-    if shutil.which("singularity") is None:
-            raise Exception("singularity is not installed")
-    else:
+    # adding trained_model repository
+    model_db_url = "https://github.com/neuronets/trained-models"
+    if _container_installed("singularity"):
+        # pull the nobrainer image from docker-hub
         download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
         if not download_image.exists():
             dwnld_cmd = ["singularity", "pull", "--dir", 
                          str(IMAGES_PATH),
                        "docker://neuronets/nobrainer-zoo:nobrainer"]
             p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-            print(p0.stdout)   
-    # for now we will overwrite every single time someone runs init
-    if MODELS_PATH.exists():
-        shutil.rmtree(MODELS_PATH)
-    # TODO: we should clone via datalad! unless the osf remote will not be available!    
-    #get_repo("https://github.com/neuronets/trained-models", MODELS_PATH)
-    clone_cmd = ["singularity", "run", "-B", CACHE_PATH,download_image, "datalad",
-                 "clone", "https://github.com/neuronets/trained-models", MODELS_PATH]
-    
-    p1 = sp.run(clone_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-    print(p1.stdout)
-    
+            print(p0.stdout)
+        # For a robust behavior of model_db, we should clone via datalad.
+        clone_cmd = ["singularity", "run", "-B", CACHE_PATH, download_image, "datalad",
+                     "clone", model_db_url, MODELS_PATH]
+        
+    elif _container_installed("docker"):
+        # check output option
+        clone_cmd = ["docker", "run", "-v", f"{CACHE_PATH}:/cache_dir",
+                     "-w", "/cache_dir",
+                     "--rm", "neuronets/nobrainer-zoo:nobrainer", 
+                     "datalad", "clone", model_db_url, "/cache_dir/trained_models"]
+    else:
+        # neither singularity or docker is found!
+        raise Exception("Neither singularuty or docker is installed!",
+                        "Please install singularity or docker and run 'nobrainer-zoo init' again.")
+        
+    if not MODELS_PATH.exists():
+        p1 = sp.run(clone_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+        print(p1.stdout)    
+    #else:
+        # update the model_db
 
-
+    
+        
 @cli.command()
 @click.argument("moving", nargs=1, type=click.Path(exists=True))
 @click.argument("fixed", nargs=1, type=click.Path(exists=True))
@@ -714,6 +724,24 @@ def _name(**variables):
     """
     # https://stackoverflow.com/questions/18425225/getting-the-name-of-a-variable-as-a-string
     return [x for x in variables][0]
+
+def _container_installed(container_type):
+    """checks singularity or docker is installed."""
+    
+    if container_type == "singularity":
+        if shutil.which("singularity") is None:
+            return False
+        else:
+            return True
+        
+    elif container_type == "docker":
+        if shutil.which("docker") is None or sp.call(["docker", "info"]):
+            return False
+        else:
+            return True
+    else:
+        raise Exception(f"container_type should be docker or singularity, "
+                        f"but {container_type} is provided")
         
 # for debugging purposes    
 if __name__ == "__main__":
