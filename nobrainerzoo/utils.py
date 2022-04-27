@@ -53,11 +53,12 @@ def get_repo(repo_url, destination, repo_state=None):
         print(f"{repo_url} repository is available locally")
         
 
-def get_model_db(models_repo):
+def get_model_db(models_repo, print_models=True):
     """
     Extracts the model's database from trained_model repository.'
     
     models_repo: Path like object, path to where trained_model repository is downloaded.
+    print_models: if True, available models will print out when calling the function.
                     
     """
     
@@ -67,17 +68,16 @@ def get_model_db(models_repo):
     for ext in model_ext:
         path_sublist = [path for path in Path(models_repo).rglob(ext) if ".git" not in str(path)]
         paths.extend(sorted(path_sublist))
-        #paths.extend(sorted(Path(models_repo).rglob(ext)))
 
-    model_db={}    
-#    breakpoint()
+    model_db={}
     for i, pth in enumerate(paths):
         #breakpoint()
         if pth.parts[-6] == 'trained-models': # if no model_type
             org = pth.parts[-5]
             model_name = pth.parts[-4]
             version = pth.parts[-3]
-            print(org+"/"+model_name+"/"+version)
+            if print_models:
+                print(org+"/"+model_name+"/"+version)
             model = org+"/"+model_name+"/"+version
             # check the model extention
             if not pth.suffix == '.pb':
@@ -90,7 +90,8 @@ def get_model_db(models_repo):
             model_name = pth.parts[-5]
             version = pth.parts[-4]
             model_type = pth.parts[-3]
-            print(org+"/"+model_name+"/"+version+"/"+model_type)
+            if print_models:
+                print(org+"/"+model_name+"/"+version+"/"+model_type)
             model = org+"/"+model_name+"/"+version
             # to avoid deleting previously added model types
             if  not model in model_db:
