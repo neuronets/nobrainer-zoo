@@ -295,7 +295,7 @@ def init():
         clone_cmd = ["docker", "run", "-v", f"{CACHE_PATH}:/cache_dir",
                      "-w", "/cache_dir",
                      "--rm", "neuronets/nobrainer-zoo:nobrainer", 
-                     "datalad", "clone", model_db_url, "/cache_dir/trained_models"]
+                     "datalad", "clone", model_db_url, "/cache_dir/trained-models"]
     else:
         # neither singularity or docker is found!
         raise Exception("Neither singularuty or docker is installed!",
@@ -306,6 +306,15 @@ def init():
         print(p1.stdout)    
     #else:
         # update the model_db
+
+@cli.command()        
+def ls():
+    """lists available models with versions and organizations."""
+    
+    if not MODELS_PATH.exists():
+       raise ValueError("Model's database does not exists. please run 'nobrainer-zoo init'.")
+       
+    _ = get_model_db(MODELS_PATH)
 
     
         

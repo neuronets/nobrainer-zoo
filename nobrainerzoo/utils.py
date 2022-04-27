@@ -55,33 +55,29 @@ def get_repo(repo_url, destination, repo_state=None):
 
 def get_model_db(models_repo):
     """
-    downloads the the trained_model repository to a given path and extracts
-    the model database.
+    Extracts the model's database from trained_model repository.'
     
-    models_repo: str, path to where trained_model repository is downloaded or
-    should be downloaded.
+    models_repo: Path like object, path to where trained_model repository is downloaded.
                     
     """
-    
-    models_repo = Path(models_repo)
-    if not models_repo.exists():
-        raise Exception(f"{models_repo} does not exists!")
     
     # create the model database
     model_ext = ("*.h5","*.pb","*.ckpt")
     paths =[]
     for ext in model_ext:
-        paths.extend(sorted(Path(models_repo).rglob(ext)))
+        path_sublist = [path for path in Path(models_repo).rglob(ext) if ".git" not in str(path)]
+        paths.extend(sorted(path_sublist))
+        #paths.extend(sorted(Path(models_repo).rglob(ext)))
 
     model_db={}    
 #    breakpoint()
     for i, pth in enumerate(paths):
         #breakpoint()
-        if pth.parts[-6] == 'trained-models':   # if no model_type
+        if pth.parts[-6] == 'trained-models': # if no model_type
             org = pth.parts[-5]
             model_name = pth.parts[-4]
             version = pth.parts[-3]
-            #print(org+"/"+model_name+"/"+version)
+            print(org+"/"+model_name+"/"+version)
             model = org+"/"+model_name+"/"+version
             # check the model extention
             if not pth.suffix == '.pb':
@@ -89,12 +85,12 @@ def get_model_db(models_repo):
             else:
                 model_db[model] = str(pth.parents[0])
                 
-        elif pth.parts[-7] == 'trained-models':    # if there is model type
+        elif pth.parts[-7] == 'trained-models': # if there is model type
             org = pth.parts[-6]
             model_name = pth.parts[-5]
             version = pth.parts[-4]
             model_type = pth.parts[-3]
-            #print(org+"/"+model_name+"/"+version+"/"+model_type)
+            print(org+"/"+model_name+"/"+version+"/"+model_type)
             model = org+"/"+model_name+"/"+version
             # to avoid deleting previously added model types
             if  not model in model_db:
@@ -105,10 +101,21 @@ def get_model_db(models_repo):
             else:
                 model_db[model][model_type] = str(pth.parents[0])
                 
-        else:
-            # TODO: consider if the exception should be raised or not
-            print(f"{i}: The {pth} is not added in proper format and it should be checked!",
-                            " It is NOT considered to model database.")
+        # else:
+        #     # TODO: consider if the exception should be raised or not
+        #     print(f"{i}: The {pth} is not added in proper format and it should be checked!",
+        #                     " It is NOT considered to model database.")
             
     return model_db
+
+def pull_singularity_image(image, path):
+    download_image = Path(path) / image
+    if not download_image.exists():
+        dwnld_cmd = ["singularity", "pull", "--dir", 
+                     str(path),
+                     # check this part
+                     f"docker://neuronets/nobrainer-zoo:{image}"]
+                     #"docker://neuronets/nobrainer-zoo:nobrainer"]
+        p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+        print(p0.stdout)
         
