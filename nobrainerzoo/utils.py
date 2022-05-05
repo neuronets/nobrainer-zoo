@@ -2,7 +2,7 @@ from pathlib import Path
 import subprocess as sp
 
 
-def get_model_path(model_db, model_name, model_type=None,):
+def get_model_path(model_db, model_name, model_type=None):
     """
     returns the path based on model_name and model_type
     
@@ -14,7 +14,6 @@ def get_model_path(model_db, model_name, model_type=None,):
     model_path: path to pretrained model file in trained_models repository
     
     """
-    
     if not model_type:
         return model_db[model_name]
     else:
@@ -112,11 +111,10 @@ def get_model_db(models_repo, print_models=True):
 def pull_singularity_image(image, path):
     download_image = Path(path) / image
     if not download_image.exists():
+        print("Downloading the container file. it might take a while...")
         dwnld_cmd = ["singularity", "pull", "--dir", 
                      str(path),
-                     # check this part
+                     # container images are stored in dockerhub neuronets/nobrainer-zoo
                      f"docker://neuronets/nobrainer-zoo:{image}"]
-                     #"docker://neuronets/nobrainer-zoo:nobrainer"]
         p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         print(p0.stdout)
-        
