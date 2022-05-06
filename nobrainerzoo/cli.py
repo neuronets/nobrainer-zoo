@@ -138,7 +138,7 @@ def predict(
         
     # download the model-required docker/singularity image and set the path
     image = _container_check(container_type=container_type, image_spec=spec.get("image"))
-
+    
     model_path = get_model_path(model_db, model, model_type=model_type)
     # get the model file
     if not Path(model_path).exists():
@@ -159,12 +159,11 @@ def predict(
         elif container_type == "docker":
             path = str(parent_dir)+":"+str(parent_dir)
             # check output option
-            # TODO: we don't have to mount parent_dir
-            cmd0 = ["docker", "run","-v",path,"-v",f"{parent_dir}:/output",
-                    "-v", f"{CACHE_PATH}:/cache_dir"
-                    "-w","/output",
-                    "--rm","neuronets/nobrainer-zoo:nobrainer", 
-                    "python3", loader, "/cache_dir/trained-models", model_path]
+            cmd0 = ["docker", "run","-v", path, 
+                    "-v", f"{CACHE_PATH}:{CACHE_PATH}",
+                    "-w", f"{MODELS_PATH}",
+                    "--rm", "neuronets/nobrainer-zoo:nobrainer", 
+                    "python3", loader, f"{MODELS_PATH}", model_path]
         else:
             raise ValueError(f"unknown container type: {container_type}")
     
@@ -172,7 +171,7 @@ def predict(
         p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         # TODO: we should be catching the errors (instead of only printing)
         print(p0.stdout)
-  
+    
     # download the model repository if needed
     if spec["repository"]["repo_download"]:
         repo_info = spec.get("repository")
