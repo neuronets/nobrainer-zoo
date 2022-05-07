@@ -15,6 +15,7 @@ else:
 MODELS_PATH = CACHE_PATH / "trained-models"
 IMAGES_PATH = CACHE_PATH / "images"
 DATA_PATH = CACHE_PATH / "data"
+REPO_PATH = CACHE_PATH / "repo"
 
 
 # https://stackoverflow.com/a/48394004/5666087
@@ -108,7 +109,7 @@ def predict(
     """
     get the prediction from model.
 
-    Saves the output file to the path defined by outfile.
+    Saves the output file to the path defined by 'outfile'.
 
     """
     
@@ -171,15 +172,11 @@ def predict(
         p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         # TODO: we should be catching the errors (instead of only printing)
         print(p0.stdout)
-    
+        
     # download the model repository if needed
     if spec["repository"]["repo_download"]:
         repo_info = spec.get("repository")
-        # UCL organization has separate repositories for different models
-        # if org == "UCL":  
-        #     org = org + "/" + model_nm
-        # repo_dest = CACHE_PATH / org / "org_repo"
-        repo_dest = CACHE_PATH
+        repo_dest = REPO_PATH / f"{model_nm}-{ver}"
         get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
            
     spec = spec["inference"]
@@ -410,7 +407,7 @@ def register(
     # download the model using container
     p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
     print(p0.stdout)
-    
+
     # download the model repository if needed
     if spec["repo"]["repo_download"]:
         repo_info = spec.get("repo")
@@ -654,7 +651,7 @@ def _container_check(container_type, image_spec):
     # check the installation of singularity or docker
     if not _container_installed(container_type):
         raise Exception(f"{container_type} is not installed.")
-    
+
     if container_type == "singularity":
         if container_type in image_spec:
             pull_singularity_image(image_spec[container_type], IMAGES_PATH)

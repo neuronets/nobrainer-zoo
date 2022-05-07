@@ -33,7 +33,7 @@ def load_model(path):
 
 def get_repo(repo_url, destination, repo_state=None):
     """
-    downoads the related repo to the destination.
+    downoads the repository to the destination path.
     repo_url: str, url of the git repository
     destination: Path or str, destination on the local file system
     repo_state: optional, git commit
@@ -108,13 +108,14 @@ def get_model_db(models_repo, print_models=True):
             
     return model_db
 
-def pull_singularity_image(image, path):
-    download_image = Path(path) / image
+def pull_singularity_image(singularity_image, path):
+    download_image = Path(path) / singularity_image
     if not download_image.exists():
+        image_tag , _ = singularity_image.split("_")[1].split(".")
         print("Downloading the container file. it might take a while...")
         dwnld_cmd = ["singularity", "pull", "--dir", 
                      str(path),
                      # container images are stored in dockerhub neuronets/nobrainer-zoo
-                     f"docker://neuronets/nobrainer-zoo:{image}"]
+                     f"docker://neuronets/nobrainer-zoo:{image_tag}"]
         p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         print(p0.stdout)
