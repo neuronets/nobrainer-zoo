@@ -358,14 +358,16 @@ def register(
     
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
-    
+    # get the model database
+    model_db = get_model_db(MODELS_PATH, print_models=False)
     # check model type
     _check_model_type(model, model_type)
     
     if model_type:
-        model_dir = parent_dir / model / model_type
+        model_dir = MODELS_PATH / model / model_type
     else:
-        model_dir = parent_dir / model
+        model_dir = MODELS_PATH / model
+        
     spec_file = model_dir / "spec.yaml"
     
     if not model_dir.exists():
@@ -381,56 +383,57 @@ def register(
     # set the docker/singularity image    
     image = _container_check(container_type=container_type, image_spec=spec.get("image"))
     
-    if container_type == "singularity":
-        
-        nb_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
-        if not nb_image.exists():
-            raise Exception("nobrainer-zoo container image not found! ",
-                            "please run 'nobrainer-zoo init'.")
-               
-        cmd0 = ["singularity", "run", nb_image, "python3", 
-                str(parent_dir/ "download.py"), model]
-        
-    elif container_type == "docker":
-        path = str(parent_dir)+":"+str(parent_dir)
+    model_path = get_model_path(model_db, model, model_type=model_type)
+    # get the model file
+    if not Path(model_path).exists():
         loader = str(parent_dir / "download.py")
-        # check output option
-        cmd0 = ["docker", "run","-v",path,"-v",f"{parent_dir}:/output","-w","/output",
-                "--rm","neuronets/nobrainer-zoo:nobrainer", 
-                "python3", loader, model]
-    else:
-        raise ValueError(f"unknown container type: {container_type}")
+        if container_type == "singularity":
+            download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
+            if not download_image.exists():
+                raise Exception("'nobrainer' singularity image is missing! ",
+                                "please run 'nobrainer-zoo init'.")
+                
+            # mount CACHE_PATH to /cache_dir, it will be used in some functions       
+            cmd0 = ["singularity", "run",
+                    "-B", str(CACHE_PATH),
+                    "-B", f"{CACHE_PATH}:/cache_dir",
+                    download_image, "python3", 
+                    loader, MODELS_PATH, model_path]
         
-    if model_type:
-        cmd0.append(model_type)
+        elif container_type == "docker":
+        
+            path = str(parent_dir)+":"+str(parent_dir)
+            # check output option
+            cmd0 = ["docker", "run", "-v", path,
+                    "-v", f"{CACHE_PATH}:{CACHE_PATH}",
+                    "-w", f"{MODELS_PATH}",
+                    "--rm", "neuronets/nobrainer-zoo:nobrainer", 
+                    "python3", loader, f"{MODELS_PATH}", model_path]
             
-    # download the model using container
-    p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-    print(p0.stdout)
+        else:
+            raise ValueError(f"unknown container type: {container_type}")
+           
+        # download the model using container
+        p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+        # TODO: we should be catching the errors (instead of only printing)
+        print(p0.stdout)
 
     # download the model repository if needed
-    if spec["repo"]["repo_download"]:
-        repo_info = spec.get("repo")
-        # UCL organization has separate repositories for different models
-        if org == "UCL":
-            org = org + "/" + model_nm
-        repo_dest = CACHE_PATH / org / "org_repo"
+    if spec["repository"]["repo_download"]:
+        repo_info = spec.get("repository")
+        repo_dest = REPO_PATH / f"{model_nm}-{ver}"
         get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
               
+    spec = spec["inference"]
     # check the input variables
     moving_path = _check_input(_name(moving=moving), moving, spec)
-    fixed_path = _check_input(_name(fixed=fixed), fixed,spec)
+    fixed_path = _check_input(_name(fixed=fixed), fixed, spec)
     out_path = Path(moved).resolve().parent
-    bind_paths = moving_path + fixed_path + [str(out_path)]
+    bind_paths = moving_path + fixed_path + [str(out_path)] + [str(CACHE_PATH)]
     
     # reading spec file in order to create options for model command
     options_spec = spec.get("options", {})
     
-    # create model_path
-    # it is used by some organizations like neuronet and voxelmorph 
-    model_path = get_model_path(model, model_type=model_type)
-    
-    # TODO: sould we check if an option is mandatory?
     model_options = []
     if eval("options") is not None:
         val_l = eval(eval("options"))
