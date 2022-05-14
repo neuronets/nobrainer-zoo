@@ -401,7 +401,6 @@ def register(
                     loader, MODELS_PATH, model_path]
         
         elif container_type == "docker":
-        
             path = str(parent_dir)+":"+str(parent_dir)
             # check output option
             cmd0 = ["docker", "run", "-v", path,
@@ -496,7 +495,7 @@ def register(
     "--model",
     type=str,
     required=True,
-    help="model name. should be in  the form of <org>/<model>",
+    help="model name. should be in  the form of <org>/<model>/<version>",
     **_option_kwds,
     )
 @click.option(
@@ -562,16 +561,16 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
     Saves the model weights, checkpoints and training history to the path defined by user.
     
     """
-    
+
     # set the docker/singularity image
-    org, model_nm = model.split("/")
-    model_dir = Path(__file__).resolve().parents[0] / model
+    org, model_nm, ver = model.split("/")
+    
     if spec_file:
         spec_file = Path(spec_file).resolve()
     else:
         # if no spec_file provided we are using the default spec from the model repo
-        spec_file = model_dir / f"{model_nm}_train_spec.yaml"
-
+        spec_file = MODELS_PATH / model / "spec.yaml"
+       
     if not spec_file.exists():
         raise Exception("model directory not found")
     if not spec_file.exists():
@@ -580,12 +579,14 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
     
+    train_spec = spec.get("train")
+
     # updating specification with the argument provided in the command line
     for arg_str in ["n_classes"]:
         if eval(arg_str) is not None:
-            spec[arg_str] = eval(arg_str)
+            train_spec[arg_str] = eval(arg_str)
 
-    for arg_dict in ["dataset_train", "dataset_test", "train", "network", "path"]:
+    for arg_dict in ["dataset_train", "dataset_test", "training", "network", "path"]:
         if eval(arg_dict) is not None:
             val_l = eval(eval(arg_dict))
             val_dict = {}
@@ -593,34 +594,42 @@ def train(model, spec_file, container_type, n_classes, dataset_train, dataset_te
                 key, val = el.split("=")
                 # if the field is in the spec file, the type from the spec
                 # is used to convert the value provided from cli
-                if key in spec[arg_dict]:
-                    tp = type(spec[arg_dict][key])
+                if key in train_spec[arg_dict]:
+                    tp = type(train_spec[arg_dict][key])
                     val_dict[key] = tp(val)
                 else:
                     val_dict[key] = val
-            spec[arg_dict].update(val_dict)
-            
+            train_spec[arg_dict].update(val_dict)
+        elif arg_dict == "path":
+            #set the cache dir to save the model
+            save_dir = DATA_PATH / f"{model_nm}-{ver}"/ "model"
+            train_spec["path"]["save_model"] = str(save_dir)
+
     if data_train_pattern and data_evaluate_pattern:
         data_train_path = Path(data_train_pattern).resolve().parent
-        spec["data_train_pattern"] = str(Path(data_train_pattern).resolve())
+        train_spec["data_train_pattern"] = str(Path(data_train_pattern).resolve())
         data_valid_path = Path(data_evaluate_pattern).resolve().parent
-        spec["data_valid_pattern"] = str(Path(data_evaluate_pattern).resolve())
+        train_spec["data_valid_pattern"] = str(Path(data_evaluate_pattern).resolve())
         bind_paths = [str(data_train_path), str(data_valid_path)]
     elif data_train_pattern or data_evaluate_pattern:
-        raise Exception(f"please provide both data_train_pattern and data_evaluate_pattern,"
-                        f" or neither if you want to use the sample data")
+        raise Exception("please provide both data_train_pattern and data_evaluate_pattern",
+                        " or neither if you want to use the sample data")
     else: # if data_train_pattern not provided, the sample data is used
-        data_path = Path(__file__).resolve().parents[0] / "data"
-        bind_paths = [str(data_path)]
+        data_train_path = DATA_PATH / f"{model_nm}-{ver}"
+        train_spec["dataset_train"]["data_location"] = str(data_train_path)
+        data_valid_path = DATA_PATH / f"{model_nm}-{ver}"
+        train_spec["dataset_test"]["data_location"] = str(data_valid_path)
+        bind_paths = [str(DATA_PATH)]
 
-    out_path = Path(".").resolve().parent
+    #out_path = Path(".").resolve().parent
+    out_path = DATA_PATH / f"{model_nm}-{ver}"
 
-    train_script = model_dir / spec["train_script"]
+    train_script = MODELS_PATH / model / "train.py"
     bind_paths.append(str(train_script.resolve().parent))
 
     spec_file_updated = spec_file.parent / "spec_updated.yaml"
     with spec_file_updated.open("w") as f:
-        yaml.dump(spec, f)
+        yaml.dump(train_spec, f)
 
     cmd = ["python", str(train_script)] + ["-config", str(spec_file_updated)]
 
