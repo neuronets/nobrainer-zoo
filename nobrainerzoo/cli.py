@@ -140,9 +140,13 @@ def predict(
     # download the model-required docker/singularity image and set the path
     image = _container_check(container_type=container_type, image_spec=spec.get("image"))
     
-    model_path = get_model_path(model_db, model, model_type=model_type)
+    model_path = Path(get_model_path(model_db, model, model_type=model_type))
+    if model_path.is_dir():
+        model_avail = model_path / "saved_model.pb"
+    else:
+        model_avail = model_path
     # get the model file
-    if not Path(model_path).exists():
+    if not model_avail.exists():
         loader = str(parent_dir / "download.py")
         if container_type == "singularity":
             download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
@@ -384,8 +388,12 @@ def register(
     image = _container_check(container_type=container_type, image_spec=spec.get("image"))
     
     model_path = get_model_path(model_db, model, model_type=model_type)
+    if model_path.is_dir():
+        model_avail = model_path / "saved_model.pb"
+    else:
+        model_avail = model_path
     # get the model file
-    if not Path(model_path).exists():
+    if not model_avail.exists():
         loader = str(parent_dir / "download.py")
         if container_type == "singularity":
             download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
