@@ -306,6 +306,8 @@ def ls():
     if not MODELS_PATH.exists():
        raise ValueError("Model's database does not exists. please run 'nobrainer-zoo init'.")
        
+    #TODO: Add models's repository update
+
     _ = get_model_db(MODELS_PATH)
 
     
@@ -383,11 +385,11 @@ def register(
        
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
-        
+    
     # set the docker/singularity image    
     image = _container_check(container_type=container_type, image_spec=spec.get("image"))
     
-    model_path = get_model_path(model_db, model, model_type=model_type)
+    model_path = Path(get_model_path(model_db, model, model_type=model_type))
     if model_path.is_dir():
         model_avail = model_path / "saved_model.pb"
     else:
