@@ -557,7 +557,7 @@ def register(
     help="paths for saving results",
     **_option_kwds,
     )
-def train(model, spec_file, container_type, n_classes, dataset_train, dataset_test,
+def fit(model, spec_file, container_type, n_classes, dataset_train, dataset_test,
           train, network, path, data_train_pattern, data_evaluate_pattern, **kwrg):
     """
     Train the model with specified parameters.
