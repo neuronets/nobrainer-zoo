@@ -1,5 +1,38 @@
 from pathlib import Path
 import subprocess as sp
+import os
+import yaml
+
+if "NOBRAINER_CACHE" in os.environ:
+    CACHE_PATH = Path(os.environ["NOBRAINER_CACHE"]).resolve() / ".nobrainer"
+else:
+    CACHE_PATH = Path(os.path.expanduser('~')) / ".nobrainer"
+MODELS_PATH = CACHE_PATH / "trained-models"
+
+
+def get_spec(model, model_type):
+    org, model_nm, ver = model.split("/")
+    
+    _check_model_type(model, model_type)
+    
+    if model_type:
+        model_dir = MODELS_PATH / model / model_type
+    else:
+        model_dir = MODELS_PATH / model
+        
+    spec_file = model_dir / "spec.yaml"
+    
+    if not model_dir.exists():
+        raise Exception("model directory not found!",
+                        "This model does not exist in the zoo or didn't properly added.")
+    if not spec_file.exists():
+        raise Exception("spec file doesn't exist!",
+                        "This model does not exist in the zoo or didn't properly added.")
+    
+    with spec_file.open() as f:
+        spec = yaml.safe_load(f)
+    
+    return spec
 
 
 def get_model_path(model_db, model_name, model_type=None):
@@ -119,3 +152,17 @@ def pull_singularity_image(singularity_image, path):
                      f"docker://neuronets/nobrainer-zoo:{image_tag}"]
         p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         print(p0.stdout)
+        
+def _check_model_type(model_name, model_type=None):
+    
+    models = get_model_db(MODELS_PATH, print_models=False)     
+    org,mdl,ver = model_name.split("/")
+
+    models_w_types = [m.split("/")[1] for m,v in models.items() if isinstance(v,dict)]
+    
+    # check if model_types is given and correct
+    if mdl in models_w_types and model_type not in models[model_name].keys():
+        raise ValueError("Model type should be one of {} but it is {}".format(
+          list(models[model_name].keys()), model_type))
+    elif mdl not in models_w_types and model_type != None:
+        raise ValueError(f"{model_name} does not have model type")

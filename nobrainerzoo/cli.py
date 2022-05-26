@@ -1,5 +1,6 @@
 from nobrainerzoo.utils import get_model_path, get_repo, get_model_db
-from nobrainerzoo.utils import pull_singularity_image
+from nobrainerzoo.utils import pull_singularity_image, _check_model_type
+from nobrainerzoo.utils import get_spec
 import subprocess as sp
 from pathlib import Path
 import click
@@ -117,25 +118,8 @@ def predict(
     parent_dir = Path(__file__).resolve().parent
     # get the model database
     model_db = get_model_db(MODELS_PATH, print_models=False)
-    # check model type
-    _check_model_type(model, model_type)
     
-    if model_type:
-        model_dir = MODELS_PATH / model / model_type
-    else:
-        model_dir = MODELS_PATH / model
-        
-    spec_file = model_dir / "spec.yaml"
-    
-    if not model_dir.exists():
-        raise Exception("model directory not found!",
-                        "This model does not exist in the zoo or didn't properly added.")
-    if not spec_file.exists():
-        raise Exception("spec file doesn't exist!",
-                        "This model does not exist in the zoo or didn't properly added.")
-      
-    with spec_file.open() as f:
-        spec = yaml.safe_load(f)
+    spec = get_spec(model, model_type) 
         
     # download the model-required docker/singularity image and set the path
     image = _container_check(container_type=container_type, image_spec=spec.get("image"))
@@ -299,18 +283,45 @@ def init():
     #else:
         # update the model_db
 
-@cli.command()        
-def ls():
-    """lists available models with versions and organizations."""
+@cli.command()
+@click.option(
+    "-m",
+    "--model",
+    type=str,
+    default=None,
+    help="model name. should be in  the form of <org>/<model>/<version>",
+    **_option_kwds,
+)
+@click.option(
+    "--model_type",
+    default=None,
+    type=str,
+    help="Type of model if there is more than one.",
+    **_option_kwds,
+)        
+def ls(model, model_type):
+    """lists available models with versions and organizations or 
+    prints the information about the model given by -m/--model. """
     
-    if not MODELS_PATH.exists():
-       raise ValueError("Model's database does not exists. please run 'nobrainer-zoo init'.")
-       
-    #TODO: Add models's repository update
-
-    _ = get_model_db(MODELS_PATH)
-
+    if not model:
     
+        if not MODELS_PATH.exists():
+           raise ValueError("Model's database does not exists. please run 'nobrainer-zoo init'.")
+           
+        #TODO: Add models's repository update
+    
+        _ = get_model_db(MODELS_PATH)
+        
+    else:
+        spec = get_spec(model, model_type)
+            
+        model_info = spec.get("model", {})
+        if not model_info:
+            raise Exception("Help is not available for this model.")
+        else:
+            for key, value in model_info.items():
+                print(key+":")
+                print(value, "\n")
         
 @cli.command()
 @click.argument("moving", nargs=1, type=click.Path(exists=True))
@@ -366,25 +377,8 @@ def register(
     parent_dir = Path(__file__).resolve().parent
     # get the model database
     model_db = get_model_db(MODELS_PATH, print_models=False)
-    # check model type
-    _check_model_type(model, model_type)
     
-    if model_type:
-        model_dir = MODELS_PATH / model / model_type
-    else:
-        model_dir = MODELS_PATH / model
-        
-    spec_file = model_dir / "spec.yaml"
-    
-    if not model_dir.exists():
-        raise Exception("model directory not found!",
-                        "This model does not exist in the zoo or didn't properly added.")
-    if not spec_file.exists():
-        raise Exception("spec file doesn't exist!",
-                        "This model does not exist in the zoo or didn't properly added.")
-       
-    with spec_file.open() as f:
-        spec = yaml.safe_load(f)
+    spec = get_spec(model, model_type)
     
     # set the docker/singularity image    
     image = _container_check(container_type=container_type, image_spec=spec.get("image"))
@@ -696,19 +690,6 @@ def _container_check(container_type, image_spec):
 
     return image
 
-def _check_model_type(model_name, model_type=None):
-    
-    models = get_model_db(MODELS_PATH, print_models=False)     
-    org,mdl,ver = model_name.split("/")
-
-    models_w_types = [m.split("/")[1] for m,v in models.items() if isinstance(v,dict)]
-    
-    # check if model_types is given and correct
-    if mdl in models_w_types and model_type not in models[model_name].keys():
-        raise ValueError("Model type should be one of {} but it is {}".format(
-          list(models[model_name].keys()), model_type))
-    elif mdl not in models_w_types and model_type != None:
-        raise ValueError(f"{model_name} does not have model type")
         
 def _check_input(infile_name,infile, spec):
     """Checks the infile path and returns the binding path for the container"""
