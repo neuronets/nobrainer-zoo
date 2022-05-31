@@ -1,5 +1,5 @@
 from nobrainerzoo.utils import get_model_path, get_repo, get_model_db
-from nobrainerzoo.utils import pull_singularity_image, _check_model_type
+from nobrainerzoo.utils import pull_singularity_image
 from nobrainerzoo.utils import get_spec
 import subprocess as sp
 from pathlib import Path
@@ -227,17 +227,160 @@ def predict(
     p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
     print(p1.stdout)
 
-
 @cli.command()
-def generate():
+@click.argument("outfile", nargs=1)
+@click.option(
+    "-m",
+    "--model",
+    type=str,
+    required=True,
+    help="model name. should be in  the form of <org>/<model>/<version>",
+    **_option_kwds,
+)
+@click.option(
+    "--model_type",
+    default=None,
+    type=str,
+    help="Type of model for kwyk and braingen model",
+    **_option_kwds,
+)
+@click.option(
+    "--container_type",
+    default="singularity",
+    type=str,
+    help="Type of the container technology (docker or singularity)",
+    **_option_kwds,
+)
+@click.option(
+    "--options",
+    type=str,
+    cls=OptionEatAll,
+    help="Model-specific options",
+    **_option_kwds,
+)
+def generate(
+    outfile,
+    model,
+    model_type,
+    container_type,
+    options,
+    **kwrg
+):
     """
     Generate output from GAN models.
     """
-    click.echo(
-        "Not implemented yet. In the future, this command will be used to generate output from GAN models."
-    )
-    sys.exit(-2)
+    org, model_nm, ver = model.split("/")
+    parent_dir = Path(__file__).resolve().parent
+    # get the model database
+    model_db = get_model_db(MODELS_PATH, print_models=False)
+    
+    spec = get_spec(model, model_type) 
+        
+    # download the model-required docker/singularity image and set the path
+    image = _container_check(container_type=container_type, image_spec=spec.get("image"))
+    
+    model_path = Path(get_model_path(model_db, model, model_type=model_type))
+    if model_path.is_dir():
+        model_avail = model_path / "saved_model.pb"
+    else:
+        model_avail = model_path
+    # get the model file
+    if not model_avail.exists():
+        loader = str(parent_dir / "download.py")
+        if container_type == "singularity":
+            download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
+            if not download_image.exists():
+                raise Exception("'nobrainer' singularity image is missing! ",
+                                "Please run 'nobrainer-zoo init'.")
+            
+            # mount CACHE_PATH to /cache_dir, I will be using that path in some functions
+            cmd0 = ["singularity", "run",
+                    "-B", str(CACHE_PATH),
+                    "-B", f"{CACHE_PATH}:/cache_dir",
+                    download_image, "python3",
+                    loader, MODELS_PATH, model_path]
+                    #str( parent_dir / "download.py"), "/cache_dir/trained-models", model]    
+        elif container_type == "docker":
+            path = str(parent_dir)+":"+str(parent_dir)
+            # check output option
+            cmd0 = ["docker", "run","-v", path, 
+                    "-v", f"{CACHE_PATH}:{CACHE_PATH}",
+                    "-w", f"{MODELS_PATH}",
+                    "--rm", "neuronets/nobrainer-zoo:nobrainer", 
+                    "python3", loader, f"{MODELS_PATH}", model_path]
+        else:
+            raise ValueError(f"unknown container type: {container_type}")
+    
+        # download the model using container
+        p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+        # TODO: we should be catching the errors (instead of only printing)
+        print(p0.stdout)
+        
+    # download the model repository if needed
+    if spec["repository"]["repo_download"]:
+        repo_info = spec.get("repository")
+        repo_dest = REPO_PATH / f"{model_nm}-{ver}"
+        get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
+        
+    spec = spec["inference"]
+    # check the input data
+    #data_path = _check_input(_name(infile=infile), infile, spec)
+    out_path = Path(outfile).resolve().parent
+    bind_paths = [str(out_path)] + [str(CACHE_PATH)]
+    # reading spec file in order to create options for model command
+    options_spec = spec.get("options", {})
+    
+    model_options = []
+    if eval("options") is not None:
+        val_l = eval(eval("options"))
+        val_dict = {}
+        for el in  val_l:
+            if "=" in el:
+                key, val = el.split("=")
+                val_dict[key] = val
+            else:
+                val_dict[el] = None
 
+        # updating command with the argument provided in the command line
+        for name, in_spec in options_spec.items():
+            if name in val_dict.keys():
+                argstr = in_spec.get("argstr", "")
+                value = val_dict[name]
+                if in_spec.get("is_flag"):
+                    model_options.append(argstr)
+                    continue
+                elif argstr:
+                    model_options.append(argstr)
+
+                if in_spec.get("type") == "list":
+                    model_options.extend([str(el) for el in eval(value)])
+                else:
+                    model_options.append(str(value))
+                  
+    # reading command from the spec file (allowing for f-string)
+    try:
+        model_cmd = eval(spec["command"])
+    except NameError:
+        model_cmd = spec["command"]
+       
+    if container_type == "singularity":
+        bind_paths = ",".join(bind_paths)
+        cmd_options = ["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
+        cmd = ["singularity", "run"] + cmd_options + [image] + model_cmd.split() \
+            + model_options
+    elif container_type == "docker":
+        bind_paths_docker = []
+        for el in bind_paths:
+            bind_paths_docker += ["-v", f"{el}:{el}"]
+        cmd_options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
+        cmd = ["docker", "run"] + cmd_options + [image] + model_cmd.split() \
+            + model_options
+    else:
+        raise ValueError(f"unknown container type: {container_type}")
+    
+    # run command
+    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+    print(p1.stdout)
 
 @cli.command()
 def init():
