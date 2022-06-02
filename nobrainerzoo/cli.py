@@ -5,7 +5,7 @@ import subprocess as sp
 from pathlib import Path
 import click
 import yaml
-import os, sys, shutil
+import os, shutil
 
 _option_kwds = {"show_default": True}
 
