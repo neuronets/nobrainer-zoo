@@ -17,10 +17,10 @@ python3 -m venv /path/to/new/virtual/environment/nobrainer-zoo
 source /path/to/new/virtual/environment/nobrainer-zoo/bin/activate
 ```
 
-Then install the nobrainer-zoo from github:
+Then install the nobrainer-zoo:
 
 ```
-python3 -m pip install git+https://github.com/neuronets/nobrainer-zoo.git
+python3 -m pip install nobrainer-zoo
 ```
 
 After installation, Nobrainer-zoo should be initialized. It also needs a cache folder to download some helper files baed on your needs. By default, it creates a cache folder in your home directory (`~/.nobrainer`). If you do not want the cache folder in your `home` directory, you can setup a different cache location by setting the environmental variable `NOBRAINER_CACHE`. run below command to set it.
