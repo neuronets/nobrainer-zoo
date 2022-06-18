@@ -1,6 +1,7 @@
-from nobrainerzoo.utils import get_model_path, get_repo, get_model_db
-from nobrainerzoo.utils import pull_singularity_image
-from nobrainerzoo.utils import get_spec
+from .utils import get_model_path, get_repo, get_model_db
+from .utils import pull_singularity_image
+from .utils import get_spec, CACHE_PATH, MODELS_PATH
+
 import subprocess as sp
 from pathlib import Path
 import click
@@ -9,11 +10,6 @@ import os, shutil
 
 _option_kwds = {"show_default": True}
 
-if "NOBRAINER_CACHE" in os.environ:
-    CACHE_PATH = Path(os.environ["NOBRAINER_CACHE"]).resolve() / ".nobrainer"
-else:
-    CACHE_PATH = Path(os.path.expanduser('~')) / ".nobrainer"
-MODELS_PATH = CACHE_PATH / "trained-models"
 IMAGES_PATH = CACHE_PATH / "images"
 DATA_PATH = CACHE_PATH / "data"
 REPO_PATH = CACHE_PATH / "repo"
@@ -383,6 +379,7 @@ def generate(
     print(p1.stdout)
 
 @cli.command()
+@click.option("-c", "--cache", default=CACHE_PATH)
 def init():
     """ Initialize ..."""
     print(f"Creating a cache directory in {CACHE_PATH}, if you want " 
@@ -465,7 +462,8 @@ def ls(model, model_type):
             for key, value in model_info.items():
                 print(key+":")
                 print(value, "\n")
-        
+
+
 @cli.command()
 @click.argument("moving", nargs=1, type=click.Path(exists=True))
 @click.argument("fixed", nargs=1, type=click.Path(exists=True))
@@ -848,12 +846,14 @@ def _check_input(infile_name,infile, spec):
    
     return [str(Path(file).resolve().parent) for file in infile]
 
+
 def _name(**variables):
     """Extracts the variable name.
     Usage: _name(variables=variables)
     """
     # https://stackoverflow.com/questions/18425225/getting-the-name-of-a-variable-as-a-string
     return [x for x in variables][0]
+
 
 def _container_installed(container_type):
     """checks singularity or docker is installed."""

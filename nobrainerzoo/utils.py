@@ -3,10 +3,9 @@ import subprocess as sp
 import os
 import yaml
 
+CACHE_PATH = Path(os.path.expanduser('~')) / ".nobrainer"
 if "NOBRAINER_CACHE" in os.environ:
-    CACHE_PATH = Path(os.environ["NOBRAINER_CACHE"]).resolve() / ".nobrainer"
-else:
-    CACHE_PATH = Path(os.path.expanduser('~')) / ".nobrainer"
+    CACHE_PATH = Path(os.environ["NOBRAINER_CACHE"]).resolve()
 MODELS_PATH = CACHE_PATH / "trained-models"
 
 
@@ -141,6 +140,7 @@ def get_model_db(models_repo, print_models=True):
             
     return model_db
 
+
 def pull_singularity_image(singularity_image, path):
     download_image = Path(path) / singularity_image
     if not download_image.exists():
@@ -152,6 +152,7 @@ def pull_singularity_image(singularity_image, path):
                      f"docker://neuronets/nobrainer-zoo:{image_tag}"]
         p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         print(p0.stdout)
+
         
 def _check_model_type(model_name, model_type=None):
     
