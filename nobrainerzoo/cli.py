@@ -184,7 +184,7 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
     if spec["repository"]["repo_download"]:
         repo_info = spec.get("repository")
         repo_dest = REPO_PATH / f"{model_nm}-{ver}"
-        get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
+        get_repo(repo_info["repo_url"], repo_dest, repo_info["committish"])
 
     spec = spec["inference"]
     # check the input data
@@ -380,7 +380,7 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
     if spec["repository"]["repo_download"]:
         repo_info = spec.get("repository")
         repo_dest = REPO_PATH / f"{model_nm}-{ver}"
-        get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
+        get_repo(repo_info["repo_url"], repo_dest, repo_info["committish"])
 
     spec = spec["inference"]
     # check the input data
@@ -699,7 +699,7 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
     if spec["repository"]["repo_download"]:
         repo_info = spec.get("repository")
         repo_dest = REPO_PATH / f"{model_nm}-{ver}"
-        get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
+        get_repo(repo_info["repo_url"], repo_dest, repo_info["committish"])
 
     spec = spec["inference"]
     # check the input variables
