@@ -10,7 +10,7 @@ conda create -n nobrainer-zoo python=3
 conda activate nobrainer-zoo
 ```
 
-or 
+or
 
 ```
 python3 -m venv /path/to/new/virtual/environment/nobrainer-zoo
@@ -29,8 +29,8 @@ After installation, Nobrainer-zoo should be initialized. It also needs a cache f
 export NOBRAINER_CACHE=<path_to_your_cache_directory>
 ```
 
-since this environmental variable will be lost when you close your terminal session you need to run it next time or a better solution is, to add it to your `~/.bashrc` file. 
-simply open the file with your text editor and add the above line at the end. Restart your terminal or re-run your `bashrc` file by `.~/bashrc` to make this change effective. 
+since this environmental variable will be lost when you close your terminal session you need to run it next time or a better solution is, to add it to your `~/.bashrc` file.
+simply open the file with your text editor and add the above line at the end. Restart your terminal or re-run your `bashrc` file by `.~/bashrc` to make this change effective.
 
 To initialize the `nobrainer-zoo` run:
 

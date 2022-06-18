@@ -1,12 +1,20 @@
-from .utils import get_model_path, get_repo, get_model_db
-from .utils import pull_singularity_image
-from .utils import get_spec, CACHE_PATH, MODELS_PATH
-
-import subprocess as sp
+import os
 from pathlib import Path
+import shutil
+import subprocess as sp
+
 import click
 import yaml
-import os, shutil
+
+from .utils import (
+    CACHE_PATH,
+    MODELS_PATH,
+    get_model_db,
+    get_model_path,
+    get_repo,
+    get_spec,
+    pull_singularity_image,
+)
 
 _option_kwds = {"show_default": True}
 
@@ -56,11 +64,11 @@ class OptionEatAll(click.Option):
         return retval
 
 
-
 @click.group()
 def cli():
     """A collection of neuro imaging deep learning models."""
     return
+
 
 @cli.command()
 @click.argument("infile", nargs=-1)
@@ -94,32 +102,26 @@ def cli():
     help="Model-specific options",
     **_option_kwds,
 )
-def predict(
-    infile,
-    outfile,
-    model,
-    model_type,
-    container_type,
-    options,
-    **kwrg
-):
+def predict(infile, outfile, model, model_type, container_type, options, **kwrg):
     """
     get the prediction from model.
 
     Saves the output file to the path defined by 'outfile'.
 
     """
-    
+
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
     # get the model database
     model_db = get_model_db(MODELS_PATH, print_models=False)
-    
-    spec = get_spec(model, model_type) 
-        
+
+    spec = get_spec(model, model_type)
+
     # download the model-required docker/singularity image and set the path
-    image = _container_check(container_type=container_type, image_spec=spec.get("image"))
-    
+    image = _container_check(
+        container_type=container_type, image_spec=spec.get("image")
+    )
+
     model_path = Path(get_model_path(model_db, model, model_type=model_type))
     if model_path.is_dir():
         model_avail = model_path / "saved_model.pb"
@@ -131,38 +133,59 @@ def predict(
         if container_type == "singularity":
             download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
             if not download_image.exists():
-                raise Exception("'nobrainer' singularity image is missing! ",
-                                "Please run 'nobrainer-zoo init'.")
-            
+                raise Exception(
+                    "'nobrainer' singularity image is missing! ",
+                    "Please run 'nobrainer-zoo init'.",
+                )
+
             # mount CACHE_PATH to /cache_dir, I will be using that path in some functions
-            cmd0 = ["singularity", "run",
-                    "-B", str(CACHE_PATH),
-                    "-B", f"{CACHE_PATH}:/cache_dir",
-                    download_image, "python3",
-                    loader, MODELS_PATH, model_path]
-                    #str( parent_dir / "download.py"), "/cache_dir/trained-models", model]    
+            cmd0 = [
+                "singularity",
+                "run",
+                "-B",
+                str(CACHE_PATH),
+                "-B",
+                f"{CACHE_PATH}:/cache_dir",
+                download_image,
+                "python3",
+                loader,
+                MODELS_PATH,
+                model_path,
+            ]
+            # str( parent_dir / "download.py"), "/cache_dir/trained-models", model]
         elif container_type == "docker":
-            path = str(parent_dir)+":"+str(parent_dir)
+            path = str(parent_dir) + ":" + str(parent_dir)
             # check output option
-            cmd0 = ["docker", "run","-v", path, 
-                    "-v", f"{CACHE_PATH}:{CACHE_PATH}",
-                    "-w", f"{MODELS_PATH}",
-                    "--rm", "neuronets/nobrainer-zoo:nobrainer", 
-                    "python3", loader, f"{MODELS_PATH}", model_path]
+            cmd0 = [
+                "docker",
+                "run",
+                "-v",
+                path,
+                "-v",
+                f"{CACHE_PATH}:{CACHE_PATH}",
+                "-w",
+                f"{MODELS_PATH}",
+                "--rm",
+                "neuronets/nobrainer-zoo:nobrainer",
+                "python3",
+                loader,
+                f"{MODELS_PATH}",
+                model_path,
+            ]
         else:
             raise ValueError(f"unknown container type: {container_type}")
-    
+
         # download the model using container
         p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         # TODO: we should be catching the errors (instead of only printing)
         print(p0.stdout)
-        
+
     # download the model repository if needed
     if spec["repository"]["repo_download"]:
         repo_info = spec.get("repository")
         repo_dest = REPO_PATH / f"{model_nm}-{ver}"
         get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
-           
+
     spec = spec["inference"]
     # check the input data
     data_path = _check_input(_name(infile=infile), infile, spec)
@@ -170,12 +193,12 @@ def predict(
     bind_paths = data_path + [str(out_path)] + [str(CACHE_PATH)]
     # reading spec file in order to create options for model command
     options_spec = spec.get("options", {})
-    
+
     model_options = []
     if eval("options") is not None:
         val_l = eval(eval("options"))
         val_dict = {}
-        for el in  val_l:
+        for el in val_l:
             if "=" in el:
                 key, val = el.split("=")
                 val_dict[key] = val
@@ -197,31 +220,56 @@ def predict(
                     model_options.extend([str(el) for el in eval(value)])
                 else:
                     model_options.append(str(value))
-                  
+
     # reading command from the spec file (allowing for f-string)
     try:
         model_cmd = eval(spec["command"])
     except NameError:
         model_cmd = spec["command"]
-       
+
     if container_type == "singularity":
         bind_paths = ",".join(bind_paths)
-        cmd_options = ["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
-        cmd = ["singularity", "run"] + cmd_options + [image] + model_cmd.split() \
+        cmd_options = [
+            "--nv",
+            "-B",
+            bind_paths,
+            "-B",
+            f"{out_path}:/output",
+            "-W",
+            "/output",
+        ]
+        cmd = (
+            ["singularity", "run"]
+            + cmd_options
+            + [image]
+            + model_cmd.split()
             + model_options
+        )
     elif container_type == "docker":
         bind_paths_docker = []
         for el in bind_paths:
             bind_paths_docker += ["-v", f"{el}:{el}"]
-        cmd_options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
-        cmd = ["docker", "run"] + cmd_options + [image] + model_cmd.split() \
+        cmd_options = bind_paths_docker + [
+            "-v",
+            f"{out_path}:/output",
+            "-w",
+            "/output",
+            "--rm",
+        ]
+        cmd = (
+            ["docker", "run"]
+            + cmd_options
+            + [image]
+            + model_cmd.split()
             + model_options
+        )
     else:
         raise ValueError(f"unknown container type: {container_type}")
-    
+
     # run command
-    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
     print(p1.stdout)
+
 
 @cli.command()
 @click.argument("outfile", nargs=1)
@@ -254,14 +302,7 @@ def predict(
     help="Model-specific options",
     **_option_kwds,
 )
-def generate(
-    outfile,
-    model,
-    model_type,
-    container_type,
-    options,
-    **kwrg
-):
+def generate(outfile, model, model_type, container_type, options, **kwrg):
     """
     Generate output from GAN models.
     """
@@ -269,12 +310,14 @@ def generate(
     parent_dir = Path(__file__).resolve().parent
     # get the model database
     model_db = get_model_db(MODELS_PATH, print_models=False)
-    
-    spec = get_spec(model, model_type) 
-        
+
+    spec = get_spec(model, model_type)
+
     # download the model-required docker/singularity image and set the path
-    image = _container_check(container_type=container_type, image_spec=spec.get("image"))
-    
+    image = _container_check(
+        container_type=container_type, image_spec=spec.get("image")
+    )
+
     model_path = Path(get_model_path(model_db, model, model_type=model_type))
     if model_path.is_dir():
         model_avail = model_path / "saved_model.pb"
@@ -286,51 +329,72 @@ def generate(
         if container_type == "singularity":
             download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
             if not download_image.exists():
-                raise Exception("'nobrainer' singularity image is missing! ",
-                                "Please run 'nobrainer-zoo init'.")
-            
+                raise Exception(
+                    "'nobrainer' singularity image is missing! ",
+                    "Please run 'nobrainer-zoo init'.",
+                )
+
             # mount CACHE_PATH to /cache_dir, I will be using that path in some functions
-            cmd0 = ["singularity", "run",
-                    "-B", str(CACHE_PATH),
-                    "-B", f"{CACHE_PATH}:/cache_dir",
-                    download_image, "python3",
-                    loader, MODELS_PATH, model_path]
-                    #str( parent_dir / "download.py"), "/cache_dir/trained-models", model]    
+            cmd0 = [
+                "singularity",
+                "run",
+                "-B",
+                str(CACHE_PATH),
+                "-B",
+                f"{CACHE_PATH}:/cache_dir",
+                download_image,
+                "python3",
+                loader,
+                MODELS_PATH,
+                model_path,
+            ]
+            # str( parent_dir / "download.py"), "/cache_dir/trained-models", model]
         elif container_type == "docker":
-            path = str(parent_dir)+":"+str(parent_dir)
+            path = str(parent_dir) + ":" + str(parent_dir)
             # check output option
-            cmd0 = ["docker", "run","-v", path, 
-                    "-v", f"{CACHE_PATH}:{CACHE_PATH}",
-                    "-w", f"{MODELS_PATH}",
-                    "--rm", "neuronets/nobrainer-zoo:nobrainer", 
-                    "python3", loader, f"{MODELS_PATH}", model_path]
+            cmd0 = [
+                "docker",
+                "run",
+                "-v",
+                path,
+                "-v",
+                f"{CACHE_PATH}:{CACHE_PATH}",
+                "-w",
+                f"{MODELS_PATH}",
+                "--rm",
+                "neuronets/nobrainer-zoo:nobrainer",
+                "python3",
+                loader,
+                f"{MODELS_PATH}",
+                model_path,
+            ]
         else:
             raise ValueError(f"unknown container type: {container_type}")
-    
+
         # download the model using container
         p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         # TODO: we should be catching the errors (instead of only printing)
         print(p0.stdout)
-        
+
     # download the model repository if needed
     if spec["repository"]["repo_download"]:
         repo_info = spec.get("repository")
         repo_dest = REPO_PATH / f"{model_nm}-{ver}"
         get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
-        
+
     spec = spec["inference"]
     # check the input data
-    #data_path = _check_input(_name(infile=infile), infile, spec)
+    # data_path = _check_input(_name(infile=infile), infile, spec)
     out_path = Path(outfile).resolve().parent
     bind_paths = [str(out_path)] + [str(CACHE_PATH)]
     # reading spec file in order to create options for model command
     options_spec = spec.get("options", {})
-    
+
     model_options = []
     if eval("options") is not None:
         val_l = eval(eval("options"))
         val_dict = {}
-        for el in  val_l:
+        for el in val_l:
             if "=" in el:
                 key, val = el.split("=")
                 val_dict[key] = val
@@ -352,43 +416,70 @@ def generate(
                     model_options.extend([str(el) for el in eval(value)])
                 else:
                     model_options.append(str(value))
-                  
+
     # reading command from the spec file (allowing for f-string)
     try:
         model_cmd = eval(spec["command"])
     except NameError:
         model_cmd = spec["command"]
-       
+
     if container_type == "singularity":
         bind_paths = ",".join(bind_paths)
-        cmd_options = ["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
-        cmd = ["singularity", "run"] + cmd_options + [image] + model_cmd.split() \
+        cmd_options = [
+            "--nv",
+            "-B",
+            bind_paths,
+            "-B",
+            f"{out_path}:/output",
+            "-W",
+            "/output",
+        ]
+        cmd = (
+            ["singularity", "run"]
+            + cmd_options
+            + [image]
+            + model_cmd.split()
             + model_options
+        )
     elif container_type == "docker":
         bind_paths_docker = []
         for el in bind_paths:
             bind_paths_docker += ["-v", f"{el}:{el}"]
-        cmd_options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
-        cmd = ["docker", "run"] + cmd_options + [image] + model_cmd.split() \
+        cmd_options = bind_paths_docker + [
+            "-v",
+            f"{out_path}:/output",
+            "-w",
+            "/output",
+            "--rm",
+        ]
+        cmd = (
+            ["docker", "run"]
+            + cmd_options
+            + [image]
+            + model_cmd.split()
             + model_options
+        )
     else:
         raise ValueError(f"unknown container type: {container_type}")
-    
+
     # run command
-    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
     print(p1.stdout)
+
 
 @cli.command()
 @click.option("-c", "--cache", default=CACHE_PATH)
 def init():
-    """ Initialize ..."""
-    print(f"Creating a cache directory in {CACHE_PATH}, if you want " 
-          "to change the location you can point environmental variable  NOBRAINER_CACHE "
-          "to the location where .nobrainer directory will be created. "
-          "run 'export NOBRAINER_CACHE=<path_to_your_location>")
+    """Initialize ..."""
+    print(
+        f"Creating a cache directory in {CACHE_PATH}, if you want "
+        "to change the location you can point environmental variable  NOBRAINER_CACHE "
+        "to the location where .nobrainer directory will be created. "
+        "run 'export NOBRAINER_CACHE=<path_to_your_location>"
+    )
 
     os.makedirs(CACHE_PATH, exist_ok=True)
-    #create subdirectory for images, data
+    # create subdirectory for images, data
     os.makedirs(IMAGES_PATH, exist_ok=True)
     os.makedirs(DATA_PATH, exist_ok=True)
     # adding trained_model repository
@@ -397,31 +488,57 @@ def init():
         # pull the nobrainer image from docker-hub
         download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
         if not download_image.exists():
-            dwnld_cmd = ["singularity", "pull", "--dir", 
-                         str(IMAGES_PATH),
-                       "docker://neuronets/nobrainer-zoo:nobrainer"]
+            dwnld_cmd = [
+                "singularity",
+                "pull",
+                "--dir",
+                str(IMAGES_PATH),
+                "docker://neuronets/nobrainer-zoo:nobrainer",
+            ]
             p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
             print(p0.stdout)
         # For a robust behavior of model_db, we should clone via datalad.
-        clone_cmd = ["singularity", "run", "-B", CACHE_PATH, download_image, "datalad",
-                     "clone", model_db_url, MODELS_PATH]
-        
+        clone_cmd = [
+            "singularity",
+            "run",
+            "-B",
+            CACHE_PATH,
+            download_image,
+            "datalad",
+            "clone",
+            model_db_url,
+            MODELS_PATH,
+        ]
+
     elif _container_installed("docker"):
         # check output option
-        clone_cmd = ["docker", "run", "-v", f"{CACHE_PATH}:/cache_dir",
-                     "-w", "/cache_dir",
-                     "--rm", "neuronets/nobrainer-zoo:nobrainer", 
-                     "datalad", "clone", model_db_url, "/cache_dir/trained-models"]
+        clone_cmd = [
+            "docker",
+            "run",
+            "-v",
+            f"{CACHE_PATH}:/cache_dir",
+            "-w",
+            "/cache_dir",
+            "--rm",
+            "neuronets/nobrainer-zoo:nobrainer",
+            "datalad",
+            "clone",
+            model_db_url,
+            "/cache_dir/trained-models",
+        ]
     else:
         # neither singularity or docker is found!
-        raise Exception("Neither singularuty or docker is installed!",
-                        "Please install singularity or docker and run 'nobrainer-zoo init' again.")
-        
+        raise Exception(
+            "Neither singularuty or docker is installed!",
+            "Please install singularity or docker and run 'nobrainer-zoo init' again.",
+        )
+
     if not MODELS_PATH.exists():
         p1 = sp.run(clone_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-        print(p1.stdout)    
-    #else:
-        # update the model_db
+        print(p1.stdout)
+    # else:
+    # update the model_db
+
 
 @cli.command()
 @click.option(
@@ -438,29 +555,31 @@ def init():
     type=str,
     help="Type of model if there is more than one.",
     **_option_kwds,
-)        
+)
 def ls(model, model_type):
-    """lists available models with versions and organizations or 
-    prints the information about the model given by -m/--model. """
-    
+    """lists available models with versions and organizations or
+    prints the information about the model given by -m/--model."""
+
     if not model:
-    
+
         if not MODELS_PATH.exists():
-           raise ValueError("Model's database does not exists. please run 'nobrainer-zoo init'.")
-           
-        #TODO: Add models's repository update
-    
+            raise ValueError(
+                "Model's database does not exists. please run 'nobrainer-zoo init'."
+            )
+
+        # TODO: Add models's repository update
+
         _ = get_model_db(MODELS_PATH)
-        
+
     else:
         spec = get_spec(model, model_type)
-            
+
         model_info = spec.get("model", {})
         if not model_info:
             raise Exception("Help is not available for this model.")
         else:
             for key, value in model_info.items():
-                print(key+":")
+                print(key + ":")
                 print(value, "\n")
 
 
@@ -497,33 +616,26 @@ def ls(model, model_type):
     help="Model-specific options",
     **_option_kwds,
 )
-def register(
-    moving,
-    fixed,
-    moved,
-    model,
-    model_type,
-    container_type,
-    options,
-    **kwrg
-):
+def register(moving, fixed, moved, model, model_type, container_type, options, **kwrg):
     """
     registers the MOVING image to the FIXED image.
 
-    output saves in the path defined by MOVED argumet.
+    output saves in the path defined by MOVED argument.
 
     """
-    
+
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
     # get the model database
     model_db = get_model_db(MODELS_PATH, print_models=False)
-    
+
     spec = get_spec(model, model_type)
-    
-    # set the docker/singularity image    
-    image = _container_check(container_type=container_type, image_spec=spec.get("image"))
-    
+
+    # set the docker/singularity image
+    image = _container_check(
+        container_type=container_type, image_spec=spec.get("image")
+    )
+
     model_path = Path(get_model_path(model_db, model, model_type=model_type))
     if model_path.is_dir():
         model_avail = model_path / "saved_model.pb"
@@ -535,28 +647,49 @@ def register(
         if container_type == "singularity":
             download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
             if not download_image.exists():
-                raise Exception("'nobrainer' singularity image is missing! ",
-                                "please run 'nobrainer-zoo init'.")
-                
-            # mount CACHE_PATH to /cache_dir, it will be used in some functions       
-            cmd0 = ["singularity", "run",
-                    "-B", str(CACHE_PATH),
-                    "-B", f"{CACHE_PATH}:/cache_dir",
-                    download_image, "python3", 
-                    loader, MODELS_PATH, model_path]
-        
+                raise Exception(
+                    "'nobrainer' singularity image is missing! ",
+                    "please run 'nobrainer-zoo init'.",
+                )
+
+            # mount CACHE_PATH to /cache_dir, it will be used in some functions
+            cmd0 = [
+                "singularity",
+                "run",
+                "-B",
+                str(CACHE_PATH),
+                "-B",
+                f"{CACHE_PATH}:/cache_dir",
+                download_image,
+                "python3",
+                loader,
+                MODELS_PATH,
+                model_path,
+            ]
+
         elif container_type == "docker":
-            path = str(parent_dir)+":"+str(parent_dir)
+            path = str(parent_dir) + ":" + str(parent_dir)
             # check output option
-            cmd0 = ["docker", "run", "-v", path,
-                    "-v", f"{CACHE_PATH}:{CACHE_PATH}",
-                    "-w", f"{MODELS_PATH}",
-                    "--rm", "neuronets/nobrainer-zoo:nobrainer", 
-                    "python3", loader, f"{MODELS_PATH}", model_path]
-            
+            cmd0 = [
+                "docker",
+                "run",
+                "-v",
+                path,
+                "-v",
+                f"{CACHE_PATH}:{CACHE_PATH}",
+                "-w",
+                f"{MODELS_PATH}",
+                "--rm",
+                "neuronets/nobrainer-zoo:nobrainer",
+                "python3",
+                loader,
+                f"{MODELS_PATH}",
+                model_path,
+            ]
+
         else:
             raise ValueError(f"unknown container type: {container_type}")
-           
+
         # download the model using container
         p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         # TODO: we should be catching the errors (instead of only printing)
@@ -567,22 +700,22 @@ def register(
         repo_info = spec.get("repository")
         repo_dest = REPO_PATH / f"{model_nm}-{ver}"
         get_repo(repo_info["repo_url"], repo_dest, repo_info["commitish"])
-              
+
     spec = spec["inference"]
     # check the input variables
     moving_path = _check_input(_name(moving=moving), moving, spec)
     fixed_path = _check_input(_name(fixed=fixed), fixed, spec)
     out_path = Path(moved).resolve().parent
     bind_paths = moving_path + fixed_path + [str(out_path)] + [str(CACHE_PATH)]
-    
+
     # reading spec file in order to create options for model command
     options_spec = spec.get("options", {})
-    
+
     model_options = []
     if eval("options") is not None:
         val_l = eval(eval("options"))
         val_dict = {}
-        for el in  val_l:
+        for el in val_l:
             if "=" in el:
                 key, val = el.split("=")
                 val_dict[key] = val
@@ -604,32 +737,55 @@ def register(
                     model_options.extend([str(el) for el in eval(value)])
                 else:
                     model_options.append(str(value))
-                  
+
     # reading command from the spec file (allowing for f-string)
     try:
         model_cmd = eval(spec["command"])
     except NameError:
         model_cmd = spec["command"]
-       
+
     if container_type == "singularity":
         bind_paths = ",".join(bind_paths)
-        cmd_options = ["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
-        cmd = ["singularity", "run"] + cmd_options + [image] + model_cmd.split() \
+        cmd_options = [
+            "--nv",
+            "-B",
+            bind_paths,
+            "-B",
+            f"{out_path}:/output",
+            "-W",
+            "/output",
+        ]
+        cmd = (
+            ["singularity", "run"]
+            + cmd_options
+            + [image]
+            + model_cmd.split()
             + model_options
+        )
     elif container_type == "docker":
         bind_paths_docker = []
         for el in bind_paths:
             bind_paths_docker += ["-v", f"{el}:{el}"]
-        cmd_options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
-        cmd = ["docker", "run"] + cmd_options + [image] + model_cmd.split() \
+        cmd_options = bind_paths_docker + [
+            "-v",
+            f"{out_path}:/output",
+            "-w",
+            "/output",
+            "--rm",
+        ]
+        cmd = (
+            ["docker", "run"]
+            + cmd_options
+            + [image]
+            + model_cmd.split()
             + model_options
+        )
     else:
         raise ValueError(f"unknown container type: {container_type}")
-    
+
     # run command
-    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
     print(p1.stdout)
-    
 
 
 @cli.command()
@@ -642,13 +798,13 @@ def register(
     required=True,
     help="model name. should be in  the form of <org>/<model>/<version>",
     **_option_kwds,
-    )
+)
 @click.option(
     "--spec_file",
     type=str,
     help="path to a spec file (if not set, the default spec is used)",
     **_option_kwds,
-    )
+)
 @click.option(
     "--container_type",
     default="singularity",
@@ -669,53 +825,65 @@ def register(
     cls=OptionEatAll,
     help="info about training dataset",
     **_option_kwds,
-    )
+)
 @click.option(
     "--dataset_test",
     type=str,
     cls=OptionEatAll,
     help="info about testing dataset",
     **_option_kwds,
-    )
+)
 @click.option(
     "--train",
     type=str,
     cls=OptionEatAll,
     help="training options",
     **_option_kwds,
-    )
+)
 @click.option(
     "--network",
     type=str,
     cls=OptionEatAll,
     help="network options",
     **_option_kwds,
-    )
+)
 @click.option(
     "--path",
     type=str,
     cls=OptionEatAll,
     help="paths for saving results",
     **_option_kwds,
-    )
-def fit(model, spec_file, container_type, n_classes, dataset_train, dataset_test,
-          train, network, path, data_train_pattern, data_evaluate_pattern, **kwrg):
+)
+def fit(
+    model,
+    spec_file,
+    container_type,
+    n_classes,
+    dataset_train,
+    dataset_test,
+    train,
+    network,
+    path,
+    data_train_pattern,
+    data_evaluate_pattern,
+    **kwrg,
+):
     """
     Train the model with specified parameters.
-    
+
     Saves the model weights, checkpoints and training history to the path defined by user.
-    
+
     """
 
     # set the docker/singularity image
     org, model_nm, ver = model.split("/")
-    
+
     if spec_file:
         spec_file = Path(spec_file).resolve()
     else:
         # if no spec_file provided we are using the default spec from the model repo
         spec_file = MODELS_PATH / model / "spec.yaml"
-       
+
     if not spec_file.exists():
         raise Exception("model directory not found")
     if not spec_file.exists():
@@ -723,7 +891,7 @@ def fit(model, spec_file, container_type, n_classes, dataset_train, dataset_test
 
     with spec_file.open() as f:
         spec = yaml.safe_load(f)
-    
+
     train_spec = spec.get("train")
 
     # updating specification with the argument provided in the command line
@@ -746,8 +914,8 @@ def fit(model, spec_file, container_type, n_classes, dataset_train, dataset_test
                     val_dict[key] = val
             train_spec[arg_dict].update(val_dict)
         elif arg_dict == "path":
-            #set the cache dir to save the model
-            save_dir = DATA_PATH / f"{model_nm}-{ver}"/ "model"
+            # set the cache dir to save the model
+            save_dir = DATA_PATH / f"{model_nm}-{ver}" / "model"
             train_spec["path"]["save_model"] = str(save_dir)
 
     if data_train_pattern and data_evaluate_pattern:
@@ -757,16 +925,18 @@ def fit(model, spec_file, container_type, n_classes, dataset_train, dataset_test
         train_spec["data_valid_pattern"] = str(Path(data_evaluate_pattern).resolve())
         bind_paths = [str(data_train_path), str(data_valid_path)]
     elif data_train_pattern or data_evaluate_pattern:
-        raise Exception("please provide both data_train_pattern and data_evaluate_pattern",
-                        " or neither if you want to use the sample data")
-    else: # if data_train_pattern not provided, the sample data is used
+        raise Exception(
+            "please provide both data_train_pattern and data_evaluate_pattern",
+            " or neither if you want to use the sample data",
+        )
+    else:  # if data_train_pattern not provided, the sample data is used
         data_train_path = DATA_PATH / f"{model_nm}-{ver}"
         train_spec["dataset_train"]["data_location"] = str(data_train_path)
         data_valid_path = DATA_PATH / f"{model_nm}-{ver}"
         train_spec["dataset_test"]["data_location"] = str(data_valid_path)
         bind_paths = [str(DATA_PATH)]
 
-    #out_path = Path(".").resolve().parent
+    # out_path = Path(".").resolve().parent
     out_path = DATA_PATH / f"{model_nm}-{ver}"
 
     train_script = MODELS_PATH / model / "train.py"
@@ -778,33 +948,48 @@ def fit(model, spec_file, container_type, n_classes, dataset_train, dataset_test
 
     cmd = ["python", str(train_script)] + ["-config", str(spec_file_updated)]
 
-    image = _container_check(container_type=container_type, image_spec=spec.get("image"))
+    image = _container_check(
+        container_type=container_type, image_spec=spec.get("image")
+    )
     if container_type == "singularity":
         bind_paths = ",".join(bind_paths)
-        options = ["--nv", "-B", bind_paths, "-B", f"{out_path}:/output", "-W", "/output"]
+        options = [
+            "--nv",
+            "-B",
+            bind_paths,
+            "-B",
+            f"{out_path}:/output",
+            "-W",
+            "/output",
+        ]
         cmd_cont = ["singularity", "run"] + options + [image] + cmd
     elif container_type == "docker":
         bind_paths_docker = []
         for el in bind_paths:
             bind_paths_docker += ["-v", f"{el}:{el}"]
-        options = bind_paths_docker + ["-v", f"{out_path}:/output", "-w", "/output", "--rm"]
+        options = bind_paths_docker + [
+            "-v",
+            f"{out_path}:/output",
+            "-w",
+            "/output",
+            "--rm",
+        ]
         cmd_cont = ["docker", "run"] + options + [image] + cmd
 
     # run command
     print("training the model ........")
-    p1 = sp.run(cmd_cont, stdout=sp.PIPE, stderr=sp.STDOUT ,text=True)
+    p1 = sp.run(cmd_cont, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
 
     # removing the file with updated spec
     spec_file_updated.unlink()
     print(p1.stdout)
 
 
-
 def _container_check(container_type, image_spec):
     """downloads the container image and returns its path"""
     if image_spec is None:
         raise Exception("image not provided in the specification")
-        
+
     # check the installation of singularity or docker
     if not _container_installed(container_type):
         raise Exception(f"{container_type} is not installed.")
@@ -812,27 +997,33 @@ def _container_check(container_type, image_spec):
     if container_type == "singularity":
         if container_type in image_spec:
             pull_singularity_image(image_spec[container_type], IMAGES_PATH)
-            image = IMAGES_PATH / image_spec[container_type]   
+            image = IMAGES_PATH / image_spec[container_type]
         else:
-            raise Exception(f"container name for {container_type} is not "
-                            f"provided in the specification, "
-                            f"try using container_type=docker")        
+            raise Exception(
+                f"container name for {container_type} is not "
+                f"provided in the specification, "
+                f"try using container_type=docker"
+            )
     elif container_type == "docker":
         if container_type in image_spec:
             image = image_spec[container_type]
         else:
-            raise Exception(f"container name for {container_type} is not "
-                            f"provided in the specification, "
-                            f"try using container_type=singularity")
+            raise Exception(
+                f"container name for {container_type} is not "
+                f"provided in the specification, "
+                f"try using container_type=singularity"
+            )
 
     else:
-        raise Exception(f"container_type should be docker or singularity, "
-                        f"but {container_type} provided")
+        raise Exception(
+            f"container_type should be docker or singularity, "
+            f"but {container_type} provided"
+        )
 
     return image
 
-        
-def _check_input(infile_name,infile, spec):
+
+def _check_input(infile_name, infile, spec):
     """Checks the infile path and returns the binding path for the container"""
     # TODO: check if the infile is a dir
     if isinstance(infile, tuple):
@@ -842,8 +1033,10 @@ def _check_input(infile_name,infile, spec):
         infile = (infile,)
     n_inputs = spec["data_spec"][f"{infile_name}"]["n_files"]
     if n_inputs != "any" and n_infile != n_inputs:
-        raise ValueError(f"This model needs {n_inputs} input files but {n_infile} files are given.")
-   
+        raise ValueError(
+            f"This model needs {n_inputs} input files but {n_infile} files are given."
+        )
+
     return [str(Path(file).resolve().parent) for file in infile]
 
 
@@ -857,22 +1050,25 @@ def _name(**variables):
 
 def _container_installed(container_type):
     """checks singularity or docker is installed."""
-    
+
     if container_type == "singularity":
         if shutil.which("singularity") is None:
             return False
         else:
             return True
-        
+
     elif container_type == "docker":
         if shutil.which("docker") is None or sp.call(["docker", "info"]):
             return False
         else:
             return True
     else:
-        raise Exception(f"container_type should be docker or singularity, "
-                        f"but {container_type} is provided.")
-        
-# for debugging purposes    
+        raise Exception(
+            f"container_type should be docker or singularity, "
+            f"but {container_type} is provided."
+        )
+
+
+# for debugging purposes
 if __name__ == "__main__":
     cli()
