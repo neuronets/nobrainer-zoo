@@ -131,10 +131,10 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
     if not model_avail.exists():
         loader = str(parent_dir / "download.py")
         if container_type == "singularity":
-            download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
+            download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
             if not download_image.exists():
                 raise Exception(
-                    "'nobrainer' singularity image is missing! ",
+                    "'nobrainer-zoo' singularity image is missing! ",
                     "Please run 'nobrainer-zoo init'.",
                 )
 
@@ -166,7 +166,7 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
                 "-w",
                 f"{MODELS_PATH}",
                 "--rm",
-                "neuronets/nobrainer-zoo:nobrainer",
+                "neuronets/nobrainer-zoo:zoo",
                 "python3",
                 loader,
                 f"{MODELS_PATH}",
@@ -327,7 +327,7 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
     if not model_avail.exists():
         loader = str(parent_dir / "download.py")
         if container_type == "singularity":
-            download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
+            download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
             if not download_image.exists():
                 raise Exception(
                     "'nobrainer' singularity image is missing! ",
@@ -362,7 +362,7 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
                 "-w",
                 f"{MODELS_PATH}",
                 "--rm",
-                "neuronets/nobrainer-zoo:nobrainer",
+                "neuronets/nobrainer-zoo:zoo",
                 "python3",
                 loader,
                 f"{MODELS_PATH}",
@@ -469,7 +469,7 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
 
 @cli.command()
 @click.option("-c", "--cache", default=CACHE_PATH)
-def init():
+def init(cache):
     """Initialize ..."""
     print(
         f"Creating a cache directory in {CACHE_PATH}, if you want "
@@ -486,14 +486,14 @@ def init():
     model_db_url = "https://github.com/neuronets/trained-models"
     if _container_installed("singularity"):
         # pull the nobrainer image from docker-hub
-        download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
+        download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
         if not download_image.exists():
             dwnld_cmd = [
                 "singularity",
                 "pull",
                 "--dir",
                 str(IMAGES_PATH),
-                "docker://neuronets/nobrainer-zoo:nobrainer",
+                "docker://neuronets/nobrainer-zoo:zoo",
             ]
             p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
             print(p0.stdout)
@@ -520,7 +520,7 @@ def init():
             "-w",
             "/cache_dir",
             "--rm",
-            "neuronets/nobrainer-zoo:nobrainer",
+            "neuronets/nobrainer-zoo:zoo",
             "datalad",
             "clone",
             model_db_url,
@@ -645,7 +645,7 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
     if not model_avail.exists():
         loader = str(parent_dir / "download.py")
         if container_type == "singularity":
-            download_image = IMAGES_PATH / "nobrainer-zoo_nobrainer.sif"
+            download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
             if not download_image.exists():
                 raise Exception(
                     "'nobrainer' singularity image is missing! ",
@@ -680,7 +680,7 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
                 "-w",
                 f"{MODELS_PATH}",
                 "--rm",
-                "neuronets/nobrainer-zoo:nobrainer",
+                "neuronets/nobrainer-zoo:zoo",
                 "python3",
                 loader,
                 f"{MODELS_PATH}",
