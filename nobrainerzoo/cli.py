@@ -141,6 +141,7 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
             cmd0 = [
                 "singularity",
                 "run",
+                "-e",
                 "-B",
                 str(CACHE_PATH),
                 "-B",
@@ -229,6 +230,7 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
     if container_type == "singularity":
         bind_paths = ",".join(bind_paths)
         cmd_options = [
+            "-e",
             "--nv",
             "-B",
             bind_paths,
@@ -337,6 +339,7 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
             cmd0 = [
                 "singularity",
                 "run",
+                "-e",
                 "-B",
                 str(CACHE_PATH),
                 "-B",
@@ -425,6 +428,7 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
     if container_type == "singularity":
         bind_paths = ",".join(bind_paths)
         cmd_options = [
+            "-e",
             "--nv",
             "-B",
             bind_paths,
@@ -500,6 +504,7 @@ def init(cache):
         clone_cmd = [
             "singularity",
             "run",
+            "-e",
             "-B",
             CACHE_PATH,
             download_image,
@@ -655,6 +660,7 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
             cmd0 = [
                 "singularity",
                 "run",
+                "-e",
                 "-B",
                 str(CACHE_PATH),
                 "-B",
@@ -746,6 +752,7 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
     if container_type == "singularity":
         bind_paths = ",".join(bind_paths)
         cmd_options = [
+            "-e",
             "--nv",
             "-B",
             bind_paths,
@@ -953,6 +960,7 @@ def fit(
     if container_type == "singularity":
         bind_paths = ",".join(bind_paths)
         options = [
+            "-e",
             "--nv",
             "-B",
             bind_paths,
