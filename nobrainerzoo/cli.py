@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 import shutil
 import subprocess as sp
-
 import click
 import yaml
 
@@ -179,7 +178,7 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
         p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         # TODO: we should be catching the errors (instead of only printing)
         print(p0.stdout)
-
+        
     # download the model repository if needed
     if spec["repository"]["repo_download"]:
         repo_info = spec.get("repository")
@@ -477,7 +476,7 @@ def init(cache):
         "to the location where .nobrainer directory will be created. "
         "run 'export NOBRAINER_CACHE=<path_to_your_location>"
     )
-
+    # TODO user should be able to set the cache path by init function and cache variable
     os.makedirs(CACHE_PATH, exist_ok=True)
     # create subdirectory for images, data
     os.makedirs(IMAGES_PATH, exist_ok=True)
