@@ -65,7 +65,7 @@ class OptionEatAll(click.Option):
 
 @click.group()
 def cli():
-    """A collection of neuro imaging deep learning models."""
+    """A collection of neuroimaging deep learning models."""
     return
 
 
@@ -116,7 +116,7 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
 
     spec = get_spec(model, model_type)
 
-    # download the model-required docker/singularity image and set the path
+    # download the container image and set the path
     image = _container_check(
         container_type=container_type, image_spec=spec.get("image")
     )
@@ -142,6 +142,8 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
                 "singularity",
                 "run",
                 "-e",
+                "-B",
+                parent_dir,
                 "-B",
                 str(CACHE_PATH),
                 "-B",
@@ -179,7 +181,7 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
         p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         # TODO: we should be catching the errors (instead of only printing)
         print(p0.stdout)
-        
+
     # download the model repository if needed
     if spec["repository"]["repo_download"]:
         repo_info = spec.get("repository")
@@ -240,11 +242,11 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
             "/output",
         ]
         cmd = (
-            ["singularity", "run"]
-            + cmd_options
-            + [image]
-            + model_cmd.split()
-            + model_options
+                ["singularity", "run"]
+                + cmd_options
+                + [image]
+                + model_cmd.split()
+                + model_options
         )
     elif container_type == "docker":
         bind_paths_docker = []
@@ -258,11 +260,11 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
             "--rm",
         ]
         cmd = (
-            ["docker", "run"]
-            + cmd_options
-            + [image]
-            + model_cmd.split()
-            + model_options
+                ["docker", "run"]
+                + cmd_options
+                + [image]
+                + model_cmd.split()
+                + model_options
         )
     else:
         raise ValueError(f"unknown container type: {container_type}")
@@ -438,11 +440,11 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
             "/output",
         ]
         cmd = (
-            ["singularity", "run"]
-            + cmd_options
-            + [image]
-            + model_cmd.split()
-            + model_options
+                ["singularity", "run"]
+                + cmd_options
+                + [image]
+                + model_cmd.split()
+                + model_options
         )
     elif container_type == "docker":
         bind_paths_docker = []
@@ -456,11 +458,11 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
             "--rm",
         ]
         cmd = (
-            ["docker", "run"]
-            + cmd_options
-            + [image]
-            + model_cmd.split()
-            + model_options
+                ["docker", "run"]
+                + cmd_options
+                + [image]
+                + model_cmd.split()
+                + model_options
         )
     else:
         raise ValueError(f"unknown container type: {container_type}")
@@ -474,13 +476,25 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
 @click.option("-c", "--cache", default=CACHE_PATH)
 def init(cache):
     """Initialize ..."""
+
+    # global CACHE_PATH
+
+    # CACHE_PATH = Path(cache)
+    # # Set the environmental variable outside python
+    # if "NOBRAINER_CACHE" in os.environ:
+    #     os.environ.setdefault("NOBRAINER_CACHE", cache)
+
+    if not CACHE_PATH.exists():
+        raise ValueError(f"{cache} can't be find!")
+
     print(
         f"Creating a cache directory in {CACHE_PATH}, if you want "
-        "to change the location you can point environmental variable  NOBRAINER_CACHE "
-        "to the location where .nobrainer directory will be created. "
-        "run 'export NOBRAINER_CACHE=<path_to_your_location>"
+        "to change the location you can point the environmental variable "
+        "NOBRAINER_CACHE to the location where .nobrainer directory will "
+        " be created. run 'export NOBRAINER_CACHE=<path_to_your_location> "
+        "or rerun the 'nobrainer-zoo init --cache/-c <path_to_your_location>'."
     )
-    # TODO user should be able to set the cache path by init function and cache variable
+
     os.makedirs(CACHE_PATH, exist_ok=True)
     # create subdirectory for images, data
     os.makedirs(IMAGES_PATH, exist_ok=True)
@@ -531,7 +545,7 @@ def init(cache):
             "/cache_dir/trained-models",
         ]
     else:
-        # neither singularity or docker is found!
+        # neither singularity nor docker is found!
         raise Exception(
             "Neither singularuty or docker is installed!",
             "Please install singularity or docker and run 'nobrainer-zoo init' again.",
@@ -571,7 +585,7 @@ def ls(model, model_type):
                 "Model's database does not exists. please run 'nobrainer-zoo init'."
             )
 
-        # TODO: Add models's repository update
+        # TODO: Add model's repository update
 
         _ = get_model_db(MODELS_PATH)
 
@@ -762,11 +776,11 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
             "/output",
         ]
         cmd = (
-            ["singularity", "run"]
-            + cmd_options
-            + [image]
-            + model_cmd.split()
-            + model_options
+                ["singularity", "run"]
+                + cmd_options
+                + [image]
+                + model_cmd.split()
+                + model_options
         )
     elif container_type == "docker":
         bind_paths_docker = []
@@ -780,11 +794,11 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
             "--rm",
         ]
         cmd = (
-            ["docker", "run"]
-            + cmd_options
-            + [image]
-            + model_cmd.split()
-            + model_options
+                ["docker", "run"]
+                + cmd_options
+                + [image]
+                + model_cmd.split()
+                + model_options
         )
     else:
         raise ValueError(f"unknown container type: {container_type}")
@@ -861,18 +875,18 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
     **_option_kwds,
 )
 def fit(
-    model,
-    spec_file,
-    container_type,
-    n_classes,
-    dataset_train,
-    dataset_test,
-    train,
-    network,
-    path,
-    data_train_pattern,
-    data_evaluate_pattern,
-    **kwrg,
+        model,
+        spec_file,
+        container_type,
+        n_classes,
+        dataset_train,
+        dataset_test,
+        train,
+        network,
+        path,
+        data_train_pattern,
+        data_evaluate_pattern,
+        **kwrg,
 ):
     """
     Train the model with specified parameters.

@@ -42,7 +42,7 @@ def get_model_path(model_db, model_name, model_type=None):
     """
     returns the path based on model_name and model_type
 
-    model_name: string value indicationg the <org>/<model>/<version>
+    model_name: string value indicating the <org>/<model>/<version>
     model_type: str, model type
 
     Returns
@@ -72,7 +72,7 @@ def load_model(path):
 
 def get_repo(repo_url, destination, repo_state=None):
     """
-    downoads the repository to the destination path.
+    downloads the repository to the destination path.
     repo_url: str, url of the git repository
     destination: Path or str, destination on the local file system
     repo_state: optional, git commit
