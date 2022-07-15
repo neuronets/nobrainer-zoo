@@ -8,16 +8,17 @@ import yaml
 from .utils import (
     CACHE_PATH,
     MODELS_PATH,
+    IMAGES_PATH,
     get_model_db,
     get_model_path,
     get_repo,
     get_spec,
     pull_singularity_image,
+    _get_model_file,
 )
 
 _option_kwds = {"show_default": True}
 
-IMAGES_PATH = CACHE_PATH / "images"
 DATA_PATH = CACHE_PATH / "data"
 REPO_PATH = CACHE_PATH / "repo"
 
@@ -67,6 +68,134 @@ class OptionEatAll(click.Option):
 def cli():
     """A collection of neuroimaging deep learning models."""
     return
+
+
+@cli.command()
+@click.option("-c", "--cache", default=CACHE_PATH)
+def init(cache):
+    """Initialize ..."""
+
+    # global CACHE_PATH
+
+    # CACHE_PATH = Path(cache)
+    # # Set the environmental variable outside python
+    # if "NOBRAINER_CACHE" in os.environ:
+    #     os.environ.setdefault("NOBRAINER_CACHE", cache)
+
+    if not CACHE_PATH.exists():
+        raise ValueError(f"{cache} can't be find!")
+
+    print(
+        f"Creating a cache directory in {CACHE_PATH}, if you want "
+        "to change the location you can point the environmental variable "
+        "NOBRAINER_CACHE to the location where .nobrainer directory will "
+        " be created. run 'export NOBRAINER_CACHE=<path_to_your_location> "
+        "or rerun the 'nobrainer-zoo init --cache/-c <path_to_your_location>'."
+    )
+
+    os.makedirs(CACHE_PATH, exist_ok=True)
+    # create subdirectory for images, data
+    os.makedirs(IMAGES_PATH, exist_ok=True)
+    os.makedirs(DATA_PATH, exist_ok=True)
+    # adding trained_model repository
+    model_db_url = "https://github.com/neuronets/trained-models"
+    if _container_installed("singularity"):
+        # pull the nobrainer image from docker-hub
+        download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
+        if not download_image.exists():
+            dwnld_cmd = [
+                "singularity",
+                "pull",
+                "--dir",
+                str(IMAGES_PATH),
+                "docker://neuronets/nobrainer-zoo:zoo",
+            ]
+            p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+            print(p0.stdout)
+        # For a robust behavior of model_db, we should clone via datalad.
+        clone_cmd = [
+            "singularity",
+            "run",
+            "-e",
+            "-B",
+            CACHE_PATH,
+            download_image,
+            "datalad",
+            "clone",
+            model_db_url,
+            MODELS_PATH,
+        ]
+    elif _container_installed("docker"):
+        # check output option
+        clone_cmd = [
+            "docker",
+            "run",
+            "-v",
+            f"{CACHE_PATH}:/cache_dir",
+            "-w",
+            "/cache_dir",
+            "--rm",
+            "neuronets/nobrainer-zoo:zoo",
+            "datalad",
+            "clone",
+            model_db_url,
+            "/cache_dir/trained-models",
+        ]
+    else:
+        # neither singularity nor docker is found!
+        raise Exception(
+            "Neither singularuty or docker is installed!",
+            "Please install singularity or docker and run 'nobrainer-zoo init' again.",
+        )
+
+    if not MODELS_PATH.exists():
+        p1 = sp.run(clone_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+        print(p1.stdout)
+    # else:
+    # update the model_db
+
+
+@cli.command()
+@click.option(
+    "-m",
+    "--model",
+    type=str,
+    default=None,
+    help="model name. should be in  the form of <org>/<model>/<version>",
+    **_option_kwds,
+)
+@click.option(
+    "--model_type",
+    default=None,
+    type=str,
+    help="Type of model if there is more than one.",
+    **_option_kwds,
+)
+def ls(model, model_type):
+    """lists available models with versions and organizations or
+    prints the information about the model given by -m/--model."""
+
+    if not model:
+
+        if not MODELS_PATH.exists():
+            raise ValueError(
+                "Model's database does not exists. please run 'nobrainer-zoo init'."
+            )
+
+        # TODO: update the trained-models repo
+
+        _ = get_model_db(MODELS_PATH)
+
+    else:
+        spec = get_spec(model, model_type)
+
+        model_info = spec.get("model", {})
+        if not model_info:
+            raise Exception("Help is not available for this model.")
+        else:
+            for key, value in model_info.items():
+                print(key + ":")
+                print(value, "\n")
 
 
 @cli.command()
@@ -126,61 +255,10 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
         model_avail = model_path / "saved_model.pb"
     else:
         model_avail = model_path
-    # get the model file
+
     if not model_avail.exists():
-        loader = str(parent_dir / "download.py")
-        if container_type == "singularity":
-            download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
-            if not download_image.exists():
-                raise Exception(
-                    "'nobrainer-zoo' singularity image is missing! ",
-                    "Please run 'nobrainer-zoo init'.",
-                )
-
-            # mount CACHE_PATH to /cache_dir, I will be using that path in some functions
-            cmd0 = [
-                "singularity",
-                "run",
-                "-e",
-                "-B",
-                parent_dir,
-                "-B",
-                str(CACHE_PATH),
-                "-B",
-                f"{CACHE_PATH}:/cache_dir",
-                download_image,
-                "python3",
-                loader,
-                MODELS_PATH,
-                model_path,
-            ]
-            # str( parent_dir / "download.py"), "/cache_dir/trained-models", model]
-        elif container_type == "docker":
-            path = str(parent_dir) + ":" + str(parent_dir)
-            # check output option
-            cmd0 = [
-                "docker",
-                "run",
-                "-v",
-                path,
-                "-v",
-                f"{CACHE_PATH}:{CACHE_PATH}",
-                "-w",
-                f"{MODELS_PATH}",
-                "--rm",
-                "neuronets/nobrainer-zoo:zoo",
-                "python3",
-                loader,
-                f"{MODELS_PATH}",
-                model_path,
-            ]
-        else:
-            raise ValueError(f"unknown container type: {container_type}")
-
-        # download the model using container
-        p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-        # TODO: we should be catching the errors (instead of only printing)
-        print(p0.stdout)
+        # get the model file
+        _get_model_file(model_path, container_type=container_type, )
 
     # download the model repository if needed
     if spec["repository"]["repo_download"]:
@@ -326,59 +404,10 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
         model_avail = model_path / "saved_model.pb"
     else:
         model_avail = model_path
-    # get the model file
+
     if not model_avail.exists():
-        loader = str(parent_dir / "download.py")
-        if container_type == "singularity":
-            download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
-            if not download_image.exists():
-                raise Exception(
-                    "'nobrainer' singularity image is missing! ",
-                    "Please run 'nobrainer-zoo init'.",
-                )
-
-            # mount CACHE_PATH to /cache_dir, I will be using that path in some functions
-            cmd0 = [
-                "singularity",
-                "run",
-                "-e",
-                "-B",
-                str(CACHE_PATH),
-                "-B",
-                f"{CACHE_PATH}:/cache_dir",
-                download_image,
-                "python3",
-                loader,
-                MODELS_PATH,
-                model_path,
-            ]
-            # str( parent_dir / "download.py"), "/cache_dir/trained-models", model]
-        elif container_type == "docker":
-            path = str(parent_dir) + ":" + str(parent_dir)
-            # check output option
-            cmd0 = [
-                "docker",
-                "run",
-                "-v",
-                path,
-                "-v",
-                f"{CACHE_PATH}:{CACHE_PATH}",
-                "-w",
-                f"{MODELS_PATH}",
-                "--rm",
-                "neuronets/nobrainer-zoo:zoo",
-                "python3",
-                loader,
-                f"{MODELS_PATH}",
-                model_path,
-            ]
-        else:
-            raise ValueError(f"unknown container type: {container_type}")
-
-        # download the model using container
-        p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-        # TODO: we should be catching the errors (instead of only printing)
-        print(p0.stdout)
+        # get the model file
+        _get_model_file(model_path, container_type=container_type, )
 
     # download the model repository if needed
     if spec["repository"]["repo_download"]:
@@ -473,135 +502,6 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
 
 
 @cli.command()
-@click.option("-c", "--cache", default=CACHE_PATH)
-def init(cache):
-    """Initialize ..."""
-
-    # global CACHE_PATH
-
-    # CACHE_PATH = Path(cache)
-    # # Set the environmental variable outside python
-    # if "NOBRAINER_CACHE" in os.environ:
-    #     os.environ.setdefault("NOBRAINER_CACHE", cache)
-
-    if not CACHE_PATH.exists():
-        raise ValueError(f"{cache} can't be find!")
-
-    print(
-        f"Creating a cache directory in {CACHE_PATH}, if you want "
-        "to change the location you can point the environmental variable "
-        "NOBRAINER_CACHE to the location where .nobrainer directory will "
-        " be created. run 'export NOBRAINER_CACHE=<path_to_your_location> "
-        "or rerun the 'nobrainer-zoo init --cache/-c <path_to_your_location>'."
-    )
-
-    os.makedirs(CACHE_PATH, exist_ok=True)
-    # create subdirectory for images, data
-    os.makedirs(IMAGES_PATH, exist_ok=True)
-    os.makedirs(DATA_PATH, exist_ok=True)
-    # adding trained_model repository
-    model_db_url = "https://github.com/neuronets/trained-models"
-    if _container_installed("singularity"):
-        # pull the nobrainer image from docker-hub
-        download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
-        if not download_image.exists():
-            dwnld_cmd = [
-                "singularity",
-                "pull",
-                "--dir",
-                str(IMAGES_PATH),
-                "docker://neuronets/nobrainer-zoo:zoo",
-            ]
-            p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-            print(p0.stdout)
-        # For a robust behavior of model_db, we should clone via datalad.
-        clone_cmd = [
-            "singularity",
-            "run",
-            "-e",
-            "-B",
-            CACHE_PATH,
-            download_image,
-            "datalad",
-            "clone",
-            model_db_url,
-            MODELS_PATH,
-        ]
-
-    elif _container_installed("docker"):
-        # check output option
-        clone_cmd = [
-            "docker",
-            "run",
-            "-v",
-            f"{CACHE_PATH}:/cache_dir",
-            "-w",
-            "/cache_dir",
-            "--rm",
-            "neuronets/nobrainer-zoo:zoo",
-            "datalad",
-            "clone",
-            model_db_url,
-            "/cache_dir/trained-models",
-        ]
-    else:
-        # neither singularity nor docker is found!
-        raise Exception(
-            "Neither singularuty or docker is installed!",
-            "Please install singularity or docker and run 'nobrainer-zoo init' again.",
-        )
-
-    if not MODELS_PATH.exists():
-        p1 = sp.run(clone_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-        print(p1.stdout)
-    # else:
-    # update the model_db
-
-
-@cli.command()
-@click.option(
-    "-m",
-    "--model",
-    type=str,
-    default=None,
-    help="model name. should be in  the form of <org>/<model>/<version>",
-    **_option_kwds,
-)
-@click.option(
-    "--model_type",
-    default=None,
-    type=str,
-    help="Type of model if there is more than one.",
-    **_option_kwds,
-)
-def ls(model, model_type):
-    """lists available models with versions and organizations or
-    prints the information about the model given by -m/--model."""
-
-    if not model:
-
-        if not MODELS_PATH.exists():
-            raise ValueError(
-                "Model's database does not exists. please run 'nobrainer-zoo init'."
-            )
-
-        # TODO: Add model's repository update
-
-        _ = get_model_db(MODELS_PATH)
-
-    else:
-        spec = get_spec(model, model_type)
-
-        model_info = spec.get("model", {})
-        if not model_info:
-            raise Exception("Help is not available for this model.")
-        else:
-            for key, value in model_info.items():
-                print(key + ":")
-                print(value, "\n")
-
-
-@cli.command()
 @click.argument("moving", nargs=1, type=click.Path(exists=True))
 @click.argument("fixed", nargs=1, type=click.Path(exists=True))
 @click.argument("moved", nargs=1, type=click.Path())
@@ -659,60 +559,10 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
         model_avail = model_path / "saved_model.pb"
     else:
         model_avail = model_path
-    # get the model file
+
     if not model_avail.exists():
-        loader = str(parent_dir / "download.py")
-        if container_type == "singularity":
-            download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
-            if not download_image.exists():
-                raise Exception(
-                    "'nobrainer' singularity image is missing! ",
-                    "please run 'nobrainer-zoo init'.",
-                )
-
-            # mount CACHE_PATH to /cache_dir, it will be used in some functions
-            cmd0 = [
-                "singularity",
-                "run",
-                "-e",
-                "-B",
-                str(CACHE_PATH),
-                "-B",
-                f"{CACHE_PATH}:/cache_dir",
-                download_image,
-                "python3",
-                loader,
-                MODELS_PATH,
-                model_path,
-            ]
-
-        elif container_type == "docker":
-            path = str(parent_dir) + ":" + str(parent_dir)
-            # check output option
-            cmd0 = [
-                "docker",
-                "run",
-                "-v",
-                path,
-                "-v",
-                f"{CACHE_PATH}:{CACHE_PATH}",
-                "-w",
-                f"{MODELS_PATH}",
-                "--rm",
-                "neuronets/nobrainer-zoo:zoo",
-                "python3",
-                loader,
-                f"{MODELS_PATH}",
-                model_path,
-            ]
-
-        else:
-            raise ValueError(f"unknown container type: {container_type}")
-
-        # download the model using container
-        p0 = sp.run(cmd0, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
-        # TODO: we should be catching the errors (instead of only printing)
-        print(p0.stdout)
+        # get the model file
+        _get_model_file(model_path, container_type=container_type, )
 
     # download the model repository if needed
     if spec["repository"]["repo_download"]:
