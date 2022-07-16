@@ -4,8 +4,6 @@ import subprocess as sp
 import yaml
 
 CACHE_PATH = Path(os.path.expanduser("~")) / ".nobrainer"
-if "NOBRAINER_CACHE" in os.environ:
-    CACHE_PATH = Path(os.environ["NOBRAINER_CACHE"]).resolve() / ".nobrainer"
 MODELS_PATH = CACHE_PATH / "trained-models"
 IMAGES_PATH = CACHE_PATH / "images"
 
@@ -102,7 +100,7 @@ def get_repo(repo_url, destination, repo_state=None):
 
 def get_model_db(models_repo, print_models=True):
     """
-    Extracts the model's database from trained_model repository.'
+    Extracts the models' database from trained_model repository.'
 
     models_repo: Path like object, path to where trained_model repository is downloaded.
     print_models: if True, available models will print out when calling the function.

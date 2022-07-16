@@ -74,23 +74,33 @@ def cli():
 @click.option("-c", "--cache", default=CACHE_PATH)
 def init(cache):
     """Initialize ..."""
+    # TODO add a clean cache option
+    # TODO add a show cache_path option
 
-    # global CACHE_PATH
+    cache = Path(cache).resolve()
+    global CACHE_PATH
 
-    # CACHE_PATH = Path(cache)
-    # # Set the environmental variable outside python
-    # if "NOBRAINER_CACHE" in os.environ:
-    #     os.environ.setdefault("NOBRAINER_CACHE", cache)
+    if "NOBRAINER_CACHE" in os.environ:
+        CACHE_PATH = Path(os.environ["NOBRAINER_CACHE"]).resolve() / ".nobrainer"
+    elif not cache.samefile(CACHE_PATH):
+        CACHE_PATH = cache / ".nobrainer"
 
-    if not CACHE_PATH.exists():
-        raise ValueError(f"{cache} can't be find!")
+    # redefine global variables
+    global MODELS_PATH
+    global IMAGES_PATH
+    global DATA_PATH
+    global REPO_PATH
+    MODELS_PATH = CACHE_PATH / "trained-models"
+    IMAGES_PATH = CACHE_PATH / "images"
+    DATA_PATH = CACHE_PATH / "data"
+    REPO_PATH = CACHE_PATH / "repo"
 
     print(
-        f"Creating a cache directory in {CACHE_PATH}, if you want "
-        "to change the location you can point the environmental variable "
-        "NOBRAINER_CACHE to the location where .nobrainer directory will "
-        " be created. run 'export NOBRAINER_CACHE=<path_to_your_location> "
-        "or rerun the 'nobrainer-zoo init --cache/-c <path_to_your_location>'."
+        f"Creating a cache directory in {CACHE_PATH}\n"
+        "you can chang the cache location by setting the environmental variable `NOBRAINER_CACHE`.\n"
+        "run 'export NOBRAINER_CACHE=<path_to_your_location>'.\n"
+        "or by the 'nobrainer-zoo init --cache/-c <path_to_your_location>'.\n"
+        "Note that NOBRAINER_CACHE variable overrides the --cache/-c option."
     )
 
     os.makedirs(CACHE_PATH, exist_ok=True)
