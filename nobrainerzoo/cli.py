@@ -234,13 +234,19 @@ def ls(model, model_type):
     **_option_kwds,
 )
 @click.option(
+    "--cpu",
+    is_flag=True,
+    help="force the Nobrainer-zoo to use the cpu when gpu is available",
+    **_option_kwds,
+)
+@click.option(
     "--options",
     type=str,
     cls=OptionEatAll,
     help="Model-specific options",
     **_option_kwds,
 )
-def predict(infile, outfile, model, model_type, container_type, options, **kwrg):
+def predict(infile, outfile, model, model_type, container_type, cpu, options, **kwrg):
     """
     get the prediction from model.
 
@@ -250,6 +256,12 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
 
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
+
+    if cpu:
+        cuda_device = dict(os.environ, **{"CUDA_VISIBLE_DEVICES": "-1"})
+    else:
+        cuda_device = None
+
     # get the model database
     model_db = get_model_db(MODELS_PATH, print_models=False)
 
@@ -316,11 +328,11 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
         model_cmd = eval(spec["command"])
     except NameError:
         model_cmd = spec["command"]
-
+    # breakpoint()
     if container_type == "singularity":
         bind_paths = ",".join(bind_paths)
         cmd_options = [
-            "-e",
+            # "-e",
             "--nv",
             "-B",
             bind_paths,
@@ -358,7 +370,11 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
         raise ValueError(f"unknown container type: {container_type}")
 
     # run command
-    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+    p1 = sp.run(cmd,
+                stdout=sp.PIPE,
+                stderr=sp.STDOUT,
+                text=True,
+                env=cuda_device)
     print(p1.stdout)
 
 
@@ -387,18 +403,30 @@ def predict(infile, outfile, model, model_type, container_type, options, **kwrg)
     **_option_kwds,
 )
 @click.option(
+    "--cpu",
+    is_flag=True,
+    help="force the Nobrainer-zoo to use the cpu when gpu is available",
+    **_option_kwds,
+)
+@click.option(
     "--options",
     type=str,
     cls=OptionEatAll,
     help="Model-specific options",
     **_option_kwds,
 )
-def generate(outfile, model, model_type, container_type, options, **kwrg):
+def generate(outfile, model, model_type, container_type, cpu, options, **kwrg):
     """
     Generate output from GAN models.
     """
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
+
+    if cpu:
+        cuda_device = dict(os.environ, **{"CUDA_VISIBLE_DEVICES": "-1"})
+    else:
+        cuda_device = None
+
     # get the model database
     model_db = get_model_db(MODELS_PATH, print_models=False)
 
@@ -507,7 +535,11 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
         raise ValueError(f"unknown container type: {container_type}")
 
     # run command
-    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+    p1 = sp.run(cmd,
+                stdout=sp.PIPE,
+                stderr=sp.STDOUT,
+                text=True,
+                env=cuda_device)
     print(p1.stdout)
 
 
@@ -538,13 +570,19 @@ def generate(outfile, model, model_type, container_type, options, **kwrg):
     **_option_kwds,
 )
 @click.option(
+    "--cpu",
+    is_flag=True,
+    help="force the Nobrainer-zoo to use the cpu when gpu is available",
+    **_option_kwds,
+)
+@click.option(
     "--options",
     type=str,
     cls=OptionEatAll,
     help="Model-specific options",
     **_option_kwds,
 )
-def register(moving, fixed, moved, model, model_type, container_type, options, **kwrg):
+def register(moving, fixed, moved, model, model_type, container_type, cpu, options, **kwrg):
     """
     registers the MOVING image to the FIXED image.
 
@@ -554,6 +592,12 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
 
     org, model_nm, ver = model.split("/")
     parent_dir = Path(__file__).resolve().parent
+
+    if cpu:
+        cuda_device = dict(os.environ, **{"CUDA_VISIBLE_DEVICES": "-1"})
+    else:
+        cuda_device = None
+
     # get the model database
     model_db = get_model_db(MODELS_PATH, print_models=False)
 
@@ -664,7 +708,11 @@ def register(moving, fixed, moved, model, model_type, container_type, options, *
         raise ValueError(f"unknown container type: {container_type}")
 
     # run command
-    p1 = sp.run(cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+    p1 = sp.run(cmd,
+                stdout=sp.PIPE,
+                stderr=sp.STDOUT,
+                text=True,
+                env=cuda_device)
     print(p1.stdout)
 
 
