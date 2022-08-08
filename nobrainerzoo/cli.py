@@ -359,8 +359,12 @@ def predict(infile, outfile, model, model_type, container_type, cpu, options, **
             "/output",
             "--rm",
         ]
+        if cpu:
+            docker_cmd = ["docker", "run"]
+        else:
+            docker_cmd = ["docker", "run", "--gpus", "all"]
         cmd = (
-                ["docker", "run"]
+                docker_cmd
                 + cmd_options
                 + [image]
                 + model_cmd.split()
@@ -524,8 +528,12 @@ def generate(outfile, model, model_type, container_type, cpu, options, **kwrg):
             "/output",
             "--rm",
         ]
+        if cpu:
+            docker_cmd = ["docker", "run"]
+        else:
+            docker_cmd = ["docker", "run", "--gpus", "all"]
         cmd = (
-                ["docker", "run"]
+                docker_cmd
                 + cmd_options
                 + [image]
                 + model_cmd.split()
@@ -697,8 +705,12 @@ def register(moving, fixed, moved, model, model_type, container_type, cpu, optio
             "/output",
             "--rm",
         ]
+        if cpu:
+            docker_cmd = ["docker", "run"]
+        else:
+            docker_cmd = ["docker", "run", "--gpus", "all"]
         cmd = (
-                ["docker", "run"]
+                docker_cmd
                 + cmd_options
                 + [image]
                 + model_cmd.split()
