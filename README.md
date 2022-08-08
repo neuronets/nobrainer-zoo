@@ -80,6 +80,10 @@ nobrainer-zoo predict -m neuronets/brainy/0.1.0 <path_to_input> <path_to_save_ou
 nobrainer-zoo predict -m UCL/SynthSeg/0.1 <path_to_input> <path_to_save_output> --options post=<path_to_posteriors>
 ```
 
+**Note**: Nobrainer-zoo will use the gpu by default. So, if you want to force it to use the cpu while the gpu is available you need to pass `--cpu` flag. If you are using docker without any gpu passing the `--cpu` flag is a must. Otherwise, you will get an error.
+
+**Note**: If you are using docker make sure to use the absolute path for input and putput files.
+
 ## Train Example
 
 For training with sample dataset you do not need to pass any dataset pattern.
