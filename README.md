@@ -20,7 +20,7 @@ source /path/to/new/virtual/environment/nobrainer-zoo/bin/activate
 Then install the nobrainer-zoo:
 
 ```
-python3 -m pip install nobrainer-zoo
+pip install https://github.com/neuronets/nobrainer-zoo/archive/refs/heads/dev.zip
 ```
 
 After installation, Nobrainer-zoo should be initialized. It also needs a cache folder to download some helper files baed on your needs. By default, it creates a cache folder in your home directory (`~/.nobrainer`). If you do not want the cache folder in your `home` directory, you can setup a different cache location by setting the environmental variable `NOBRAINER_CACHE`. run below command to set it.
@@ -79,6 +79,10 @@ nobrainer-zoo predict -m neuronets/brainy/0.1.0 <path_to_input> <path_to_save_ou
 
 nobrainer-zoo predict -m UCL/SynthSeg/0.1 <path_to_input> <path_to_save_output> --options post=<path_to_posteriors>
 ```
+
+**Note**: Nobrainer-zoo will use the gpu by default. So, if you want to force it to use the cpu while the gpu is available you need to pass `--cpu` flag. If you are using docker without any gpu passing the `--cpu` flag is a must. Otherwise, you will get an error.
+
+**Note**: If you are using docker make sure to use the absolute path for input and putput files.
 
 ## Train Example
 
