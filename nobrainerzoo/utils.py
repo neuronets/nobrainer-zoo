@@ -3,7 +3,11 @@ from pathlib import Path
 import subprocess as sp
 import yaml
 
-CACHE_PATH = Path(os.path.expanduser("~")) / ".nobrainer"
+if "NOBRAINER_CACHE" in os.environ:
+    CACHE_PATH = Path(os.environ["NOBRAINER_CACHE"]).resolve() / ".nobrainer"
+else:
+    CACHE_PATH = Path(os.path.expanduser("~")) / ".nobrainer"
+
 MODELS_PATH = CACHE_PATH / "trained-models"
 IMAGES_PATH = CACHE_PATH / "images"
 
