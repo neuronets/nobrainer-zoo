@@ -112,7 +112,7 @@ def get_model_db(models_repo, print_models=True):
     """
 
     # create the model database
-    model_ext = ("*.h5", "*.pb", "*.ckpt")
+    model_ext = ("*.h5", "*.pb", "*.ckpt", "*.pt", "*.pth")
     paths = []
     for ext in model_ext:
         path_sublist = [
