@@ -97,7 +97,7 @@ def init(cache):
 
     print(
         f"Creating a cache directory in {CACHE_PATH}\n"
-        "you can chang the cache location by setting the environmental variable `NOBRAINER_CACHE`.\n"
+        "you can change the cache location by setting the environmental variable `NOBRAINER_CACHE`.\n"
         "run 'export NOBRAINER_CACHE=<path_to_your_location>'.\n"
         "or by the 'nobrainer-zoo init --cache/-c <path_to_your_location>'.\n"
         "Note that NOBRAINER_CACHE variable overrides the --cache/-c option."

@@ -23,7 +23,7 @@ Then install the nobrainer-zoo:
 pip install https://github.com/neuronets/nobrainer-zoo/archive/refs/heads/dev.zip
 ```
 
-After installation, Nobrainer-zoo should be initialized. It also needs a cache folder to download some helper files baed on your needs. By default, it creates a cache folder in your home directory (`~/.nobrainer`). If you do not want the cache folder in your `home` directory, you can setup a different cache location by setting the environmental variable `NOBRAINER_CACHE`. run below command to set it.
+After installation, Nobrainer-zoo should be initialized. It also needs a cache folder to download some helper files based on your needs. By default, it creates a cache folder in your home directory (`~/.nobrainer`). If you do not want the cache folder in your `home` directory, you can setup a different cache location by setting the environmental variable `NOBRAINER_CACHE`. run below command to set it.
 
 ```
 export NOBRAINER_CACHE=<path_to_your_cache_directory>
