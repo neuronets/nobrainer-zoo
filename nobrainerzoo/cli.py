@@ -4,6 +4,7 @@ import shutil
 import subprocess as sp
 import click
 import yaml
+import re
 
 from .utils import (
     CACHE_PATH,
@@ -991,12 +992,20 @@ def _name(**variables):
 
 def _container_installed(container_type):
     """checks singularity or docker is installed."""
-
+    # Check for singularity installation and version
     if container_type == "singularity":
         if shutil.which("singularity") is None:
             return False
         else:
-            return True
+            try:
+                singularity_version_output = sp.check_output(["singularity", "--version"], text=True)
+                singularity_version = re.search(r"\d+\.\d+\.\d+", singularity_version_output).group()
+                if singularity_version >= "3.7":
+                    return True
+                else:
+                    return False
+            except sp.CalledProcessError:
+                return False
 
     elif container_type == "docker":
         if shutil.which("docker") is None or sp.call(["docker", "info"]):
