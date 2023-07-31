@@ -998,9 +998,14 @@ def _container_installed(container_type):
             return False
         else:
             try:
+                # Checks singularity version and apptainer
                 singularity_version_output = sp.check_output(["singularity", "--version"], text=True)
                 singularity_version = re.search(r"\d+\.\d+\.\d+", singularity_version_output).group()
-                if singularity_version >= "3.7":
+                
+                app_tainer_version_output = sp.check_output(["apptainer", "--version"], text=True)
+                app_tainer_version = re.search(r"\d+\.\d+\.\d+", app_tainer_version_output).group()
+
+                if singularity_version >= "3.7" or app_tainer_version > "1.0":
                     return True
                 else:
                     return False
