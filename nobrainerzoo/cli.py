@@ -15,6 +15,7 @@ from .utils import (
     get_repo,
     get_spec,
     pull_singularity_image,
+    pull_apptainer_image,
     _get_model_file,
 )
 
@@ -356,7 +357,26 @@ def predict(infile, outfile, model, model_type, container_type, cpu, options, **
     except NameError:
         model_cmd = spec["command"]
     # breakpoint()
-    if container_type == "singularity":
+    if container_type == "apptainer":
+        bind_paths = ",".join(bind_paths)
+        cmd_options = [
+            #"-e",
+            "--nv",
+            "-B",
+            bind_paths,
+            "-B",
+            f"{out_path}:/output",
+            "-W",
+            "/output",
+        ]
+        cmd = (
+                ["apptainer", "exec"]
+                + cmd_options
+                + [image]
+                + model_cmd.split()
+                + model_options
+        )
+    elif container_type == "singularity":
         bind_paths = ",".join(bind_paths)
         cmd_options = [
             # "-e",
@@ -369,7 +389,7 @@ def predict(infile, outfile, model, model_type, container_type, cpu, options, **
             "/output",
         ]
         cmd = (
-                ["singularity", "run"]
+                ["singularity", "exec"]
                 + cmd_options
                 + [image]
                 + model_cmd.split()
@@ -430,7 +450,7 @@ def predict(infile, outfile, model, model_type, container_type, cpu, options, **
     "--container_type",
     default="singularity",
     type=str,
-    help="Type of the container technology (docker or singularity)",
+    help="Type of the container technology (docker, singularity or apptainer)",
     **_option_kwds,
 )
 @click.option(
@@ -463,7 +483,7 @@ def generate(outfile, model, model_type, container_type, cpu, options, **kwrg):
 
     spec = get_spec(model, model_type)
 
-    # download the model-required docker/singularity image and set the path
+    # download the model-required docker/singularity/apptainer image and set the path
     image = _container_check(
         container_type=container_type, image_spec=spec.get("image")
     )
@@ -525,7 +545,26 @@ def generate(outfile, model, model_type, container_type, cpu, options, **kwrg):
     except NameError:
         model_cmd = spec["command"]
 
-    if container_type == "singularity":
+    if container_type == "apptainer":
+        bind_paths = ",".join(bind_paths)
+        cmd_options = [
+            #"-e",
+            "--nv",
+            "-B",
+            bind_paths,
+            "-B",
+            f"{out_path}:/output",
+            "-W",
+            "/output",
+        ]
+        cmd = (
+                ["apptainer", "exec"]
+                + cmd_options
+                + [image]
+                + model_cmd.split()
+                + model_options
+        )
+    elif container_type == "singularity":
         bind_paths = ",".join(bind_paths)
         cmd_options = [
             "-e",
@@ -538,7 +577,7 @@ def generate(outfile, model, model_type, container_type, cpu, options, **kwrg):
             "/output",
         ]
         cmd = (
-                ["singularity", "run"]
+                ["singularity", "exec"]
                 + cmd_options
                 + [image]
                 + model_cmd.split()
@@ -601,7 +640,7 @@ def generate(outfile, model, model_type, container_type, cpu, options, **kwrg):
     "--container_type",
     default="singularity",
     type=str,
-    help="Type of the container technology (docker or singularity)",
+    help="Type of the container technology (docker, singularity or apptainer)",
     **_option_kwds,
 )
 @click.option(
@@ -638,7 +677,7 @@ def register(moving, fixed, moved, model, model_type, container_type, cpu, optio
 
     spec = get_spec(model, model_type)
 
-    # set the docker/singularity image
+    # set the docker/singularity/apptainer image
     image = _container_check(
         container_type=container_type, image_spec=spec.get("image")
     )
@@ -702,7 +741,27 @@ def register(moving, fixed, moved, model, model_type, container_type, cpu, optio
     except NameError:
         model_cmd = spec["command"]
 
-    if container_type == "singularity":
+    if container_type == "apptainer":
+        bind_paths = ",".join(bind_paths)
+        cmd_options = [
+            #"-e",
+            "--nv",
+            "-B",
+            bind_paths,
+            "-B",
+            f"{out_path}:/output",
+            "-W",
+            "/output",
+        ]
+        cmd = (
+                ["apptainer", "exec"]
+                + cmd_options
+                + [image]
+                + model_cmd.split()
+                + model_options
+        )
+
+    elif container_type == "singularity":
         bind_paths = ",".join(bind_paths)
         cmd_options = [
             "-e",
@@ -715,7 +774,7 @@ def register(moving, fixed, moved, model, model_type, container_type, cpu, optio
             "/output",
         ]
         cmd = (
-                ["singularity", "run"]
+                ["singularity", "exec"]
                 + cmd_options
                 + [image]
                 + model_cmd.split()
@@ -776,7 +835,7 @@ def register(moving, fixed, moved, model, model_type, container_type, cpu, optio
     "--container_type",
     default="singularity",
     type=str,
-    help="Type of the container technology (docker or singularity)",
+    help="Type of the container technology (docker, singularity or apptainer)",
     **_option_kwds,
 )
 @click.option(
@@ -842,7 +901,7 @@ def fit(
 
     """
 
-    # set the docker/singularity image
+    # set the docker/singularity/apptainer image
     org, model_nm, ver = model.split("/")
 
     if spec_file:
@@ -918,7 +977,22 @@ def fit(
     image = _container_check(
         container_type=container_type, image_spec=spec.get("image")
     )
-    if container_type == "singularity":
+
+    if container_type == "apptainer":
+        bind_paths = ",".join(bind_paths)
+        cmd_options = [
+            #"-e",
+            "--nv",
+            "-B",
+            bind_paths,
+            "-B",
+            f"{out_path}:/output",
+            "-W",
+            "/output",
+        ]
+        cmd_cont = ["apptainer", "exec"] + options + [image] + cmd
+
+    elif container_type == "singularity":
         bind_paths = ",".join(bind_paths)
         options = [
             "-e",
@@ -930,7 +1004,7 @@ def fit(
             "-W",
             "/output",
         ]
-        cmd_cont = ["singularity", "run"] + options + [image] + cmd
+        cmd_cont = ["singularity", "exec"] + options + [image] + cmd
     elif container_type == "docker":
         bind_paths_docker = []
         for el in bind_paths:
@@ -958,11 +1032,22 @@ def _container_check(container_type, image_spec):
     if image_spec is None:
         raise Exception("image not provided in the specification")
 
-    # check the installation of singularity or docker
+    # check the installation of singularity or docker or apptainer
     if not _container_installed(container_type):
         raise Exception(f"{container_type} is not installed.")
 
-    if container_type == "singularity":
+    if container_type == "apptainer":
+        if container_type in image_spec:
+            pull_apptainer_image(image_spec[container_type], IMAGES_PATH)
+            image = IMAGES_PATH / image_spec[container_type]
+        else:
+            raise Exception(
+                f"container name for {container_type} is not "
+                f"provided in the specification, "
+                f"try using container_type=singularity"
+            )
+        
+    elif container_type == "singularity":
         if container_type in image_spec:
             pull_singularity_image(image_spec[container_type], IMAGES_PATH)
             image = IMAGES_PATH / image_spec[container_type]
@@ -984,7 +1069,7 @@ def _container_check(container_type, image_spec):
 
     else:
         raise Exception(
-            f"container_type should be docker or singularity, "
+            f"container_type should be docker, singularity or apptainer, "
             f"but {container_type} provided"
         )
 
@@ -1027,11 +1112,22 @@ def _container_installed(container_type):
                 # Checks singularity version and apptainer
                 singularity_version_output = sp.check_output(["singularity", "--version"], text=True)
                 singularity_version = re.search(r"\d+\.\d+\.\d+", singularity_version_output).group()
-                
+            
+                # When singularity and apptainer are loaded in the same env, doing singularity --version will return apptainer's version. Therefore, here I check for both scenarios, where apptainer & singularity are installed or only singularity.
+                if singularity_version >= "3.7" or (shutil.which("apptainer") is not None and singularity_version >= "1.0"):
+                    return True
+                else:
+                    return False
+            except sp.CalledProcessError:
+                return False
+    elif container_type == "apptainer":
+        if shutil.which("apptainer") is None:
+            return False
+        else:
+            try:
                 app_tainer_version_output = sp.check_output(["apptainer", "--version"], text=True)
                 app_tainer_version = re.search(r"\d+\.\d+\.\d+", app_tainer_version_output).group()
-
-                if singularity_version >= "3.7" or app_tainer_version > "1.0":
+                if app_tainer_version > "1.0":
                     return True
                 else:
                     return False
@@ -1045,7 +1141,7 @@ def _container_installed(container_type):
             return True
     else:
         raise Exception(
-            f"container_type should be docker or singularity, "
+            f"container_type should be docker, singularity or apptainer, "
             f"but {container_type} is provided."
         )
 

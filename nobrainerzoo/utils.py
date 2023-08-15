@@ -177,6 +177,21 @@ def pull_singularity_image(singularity_image, path):
         p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
         print(p0.stdout)
 
+def pull_apptainer_image(apptainer_image, path):
+    download_image = Path(path) /apptainer_image
+    if not download_image.exists():
+        image_tag, _ = apptainer_image.split("_")[1].split(".")
+        print("Downloading the container file. it might take a while...")
+        dwnld_cmd = [
+            "apptainer",
+            "pull",
+            "--dir",
+            str(path),
+            # container images are stored in dockerhub neuronets/nobrainer-zoo
+            f"docker://neuronets/nobrainer-zoo:{image_tag}",
+        ]
+        p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+        print(p0.stdout)
 
 def _check_model_type(model_name, model_type=None):
     models = get_model_db(MODELS_PATH, print_models=False)
@@ -199,7 +214,33 @@ def _get_model_file(model_path, container_type, ):
     """downloads the model file."""
     parent_dir = Path(__file__).resolve().parent
     loader = str(parent_dir / "download.py")
-    if container_type == "singularity":
+    if container_type == "apptainer":
+        download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
+        if not download_image.exists():
+            raise Exception(
+                "'nobrainer-zoo' apptainer image is missing! ",
+                "Please run 'nobrainer-zoo init'.",
+            )
+
+        # mount CACHE_PATH to /cache_dir, I will be using that path in some functions
+        cmd0 = [
+            "apptainer",
+            "run",
+            "-e",
+            "-B",
+            parent_dir,
+            "-B",
+            str(CACHE_PATH),
+            "-B",
+            f"{CACHE_PATH}:/cache_dir",
+            download_image,
+            "python3",
+            loader,
+            MODELS_PATH,
+            model_path,
+        ]
+        # str( parent_dir / "download.py"), "/cache_dir/trained-models", model]
+    elif container_type == "singularity":
         download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
         if not download_image.exists():
             raise Exception(
