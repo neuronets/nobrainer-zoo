@@ -110,7 +110,33 @@ def init(cache):
     os.makedirs(DATA_PATH, exist_ok=True)
     # adding trained_model repository
     model_db_url = "https://github.com/neuronets/trained-models"
-    if _container_installed("singularity"):
+    if _container_installed("apptainer"):
+        # pull the nobrainer image from docker-hub
+        download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
+        if not download_image.exists():
+            dwnld_cmd = [
+                "apptainer",
+                "pull",
+                "--dir",
+                str(IMAGES_PATH),
+                "docker://neuronets/nobrainer-zoo:zoo",
+            ]
+            p0 = sp.run(dwnld_cmd, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+            print(p0.stdout)
+        # For a robust behavior of model_db, we should clone via datalad.
+        clone_cmd = [
+            "apptainer",
+            "run",
+            "-e",
+            "-B",
+            CACHE_PATH,
+            download_image,
+            "datalad",
+            "clone",
+            model_db_url,
+            MODELS_PATH,
+        ]
+    elif _container_installed("singularity"):
         # pull the nobrainer image from docker-hub
         download_image = IMAGES_PATH / "nobrainer-zoo_zoo.sif"
         if not download_image.exists():
@@ -231,7 +257,7 @@ def ls(model, model_type):
     "--container_type",
     default="singularity",
     type=str,
-    help="Type of the container technology (docker or singularity)",
+    help="Type of the container technology (docker, singularity, or apptainer)",
     **_option_kwds,
 )
 @click.option(
