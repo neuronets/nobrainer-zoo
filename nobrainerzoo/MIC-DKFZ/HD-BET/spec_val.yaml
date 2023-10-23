@@ -1,0 +1,8 @@
+#### Val script
+val_script: hdbet_val.py
+
+#### general settings
+INPUT_FILENAME: sample.nii.gz
+device: cuda:0
+INPUT_FOLDER: data/
+OUTPUT_FOLDER: output/
